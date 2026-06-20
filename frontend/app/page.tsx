@@ -2,17 +2,51 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[85vh]">
-      <div className="text-center max-w-2xl">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg">
-          <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
-          </svg>
-        </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">SuryaGrid AI</h1>
-        <p className="text-xl text-gray-600 mb-2">Solar Nowcasting &amp; DSM Penalty Prediction</p>
-        <p className="text-sm text-gray-400 mb-8">Intelligent multi-agent system for solar generation monitoring, deviation settlement mechanism analysis, and grid compliance</p>
-        <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2 text-base px-8 py-3">
+    <div className="flex flex-col items-center justify-center min-h-[85vh] relative">
+      {/* Background orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-500/5 rounded-full blur-2xl"></div>
+      </div>
+
+      <div className="text-center max-w-2xl relative z-10">
+        {/* 3D Sun Icon */}
+        <svg viewBox="0 0 120 120" className="w-24 h-24 mx-auto mb-8 animate-float" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="sunCore" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stopColor="#fde68a" />
+              <stop offset="60%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#d97706" />
+            </radialGradient>
+            <filter id="sunShadow">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#f59e0b" floodOpacity="0.4" />
+            </filter>
+          </defs>
+          <circle cx="60" cy="60" r="45" fill="#f59e0b" opacity="0.1">
+            <animate attributeName="r" values="42;48;42" dur="4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="60" cy="60" r="30" fill="url(#sunCore)" filter="url(#sunShadow)" />
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => (
+            <line
+              key={i}
+              x1={60 + Math.cos(a * Math.PI / 180) * 35}
+              y1={60 + Math.sin(a * Math.PI / 180) * 35}
+              x2={60 + Math.cos(a * Math.PI / 180) * 48}
+              y2={60 + Math.sin(a * Math.PI / 180) * 48}
+              stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" opacity="0.7"
+            />
+          ))}
+        </svg>
+
+        <h1 className="text-5xl font-bold text-white mb-3">
+          Surya<span className="text-gradient">Grid</span> AI
+        </h1>
+        <p className="text-xl text-white/60 mb-3">Solar Nowcasting &amp; DSM Penalty Prediction</p>
+        <p className="text-sm text-white/30 mb-10 max-w-md mx-auto leading-relaxed">
+          Multi-agent intelligence system for solar generation forecasting, deviation settlement analysis, and grid compliance monitoring
+        </p>
+        <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2 text-base px-8 py-3.5">
           Open Dashboard
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
         </Link>

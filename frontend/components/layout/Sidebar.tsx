@@ -11,44 +11,52 @@ const links = [
 export default function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="w-64 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white min-h-screen p-5 flex flex-col shadow-xl">
-      <div className="mb-10">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center">
-            <svg className="w-5 h-5 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
+    <aside className="w-64 min-h-screen p-4 flex flex-col border-r border-white/5 bg-black/20 backdrop-blur-sm">
+      {/* Logo */}
+      <div className="mb-10 px-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
             </svg>
           </div>
-          <span className="text-xl font-bold">SuryaGrid</span>
+          <div>
+            <div className="text-lg font-bold text-white">SuryaGrid</div>
+            <div className="text-[10px] text-white/40 uppercase tracking-widest">AI Platform</div>
+          </div>
         </div>
-        <div className="text-xs text-gray-400 ml-10">Solar DSM Intelligence</div>
       </div>
 
+      {/* Nav */}
       <nav className="flex flex-col gap-1 flex-1">
-        {links.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
-              pathname === l.href
-                ? "bg-blue-600/20 text-blue-300 font-medium border border-blue-500/30"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
-            }`}
-          >
-            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={l.icon} />
-            </svg>
-            {l.label}
-          </Link>
-        ))}
+        {links.map((l) => {
+          const active = pathname === l.href;
+          return (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+                active
+                  ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/10 text-cyan-300 border border-cyan-500/20 shadow-lg shadow-cyan-500/5"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+              }`}
+            >
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={l.icon} />
+              </svg>
+              <span className="font-medium">{l.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
-      <div className="pt-4 border-t border-gray-700/50">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-          Phase 1 Active
+      {/* Status */}
+      <div className="glass-card p-3 mt-4">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50"></div>
+          <span className="text-xs text-white/60 font-medium">System Active</span>
         </div>
-        <div className="text-xs text-gray-600 mt-1">Synthetic Data Mode</div>
+        <div className="text-[10px] text-white/30 mt-1 ml-4">Phase 1 &middot; Synthetic Mode</div>
       </div>
     </aside>
   );
