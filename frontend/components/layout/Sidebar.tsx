@@ -3,32 +3,52 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/predictions", label: "Scenario Analysis" },
-  { href: "/timeline", label: "Generation Timeline" },
+  { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
+  { href: "/predictions", label: "Scenario Analysis", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+  { href: "/timeline", label: "Generation Timeline", icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="w-60 bg-gray-900 text-white min-h-screen p-5 flex flex-col">
-      <div className="mb-8">
-        <div className="text-xl font-bold text-yellow-400">Suryagrid AI</div>
-        <div className="text-xs text-gray-400 mt-1">Solar DSM Monitoring</div>
+    <aside className="w-64 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white min-h-screen p-5 flex flex-col shadow-xl">
+      <div className="mb-10">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+            </svg>
+          </div>
+          <span className="text-xl font-bold">SuryaGrid</span>
+        </div>
+        <div className="text-xs text-gray-400 ml-10">Solar DSM Intelligence</div>
       </div>
-      <nav className="flex flex-col gap-1">
+
+      <nav className="flex flex-col gap-1 flex-1">
         {links.map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            className={`px-3 py-2 rounded text-sm ${pathname === l.href ? "bg-blue-600 font-medium" : "hover:bg-gray-700 text-gray-300"}`}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+              pathname === l.href
+                ? "bg-blue-600/20 text-blue-300 font-medium border border-blue-500/30"
+                : "text-gray-400 hover:text-white hover:bg-white/5"
+            }`}
           >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d={l.icon} />
+            </svg>
             {l.label}
           </Link>
         ))}
       </nav>
-      <div className="mt-auto text-xs text-gray-500 pt-6 border-t border-gray-700">
-        Phase 1 &middot; Synthetic Data Mode
+
+      <div className="pt-4 border-t border-gray-700/50">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+          Phase 1 Active
+        </div>
+        <div className="text-xs text-gray-600 mt-1">Synthetic Data Mode</div>
       </div>
     </aside>
   );

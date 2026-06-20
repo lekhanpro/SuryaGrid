@@ -1,0 +1,1 @@
+Suryagrid AI Phase 1 - Complete MVP: Solar Nowcasting + DSM Penalty Prediction + Fuzzy Risk Engine
