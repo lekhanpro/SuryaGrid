@@ -1,0 +1,16 @@
+flowchart TD
+  REQ["Incoming API request"] --> CORS["CORS + HTTPS ready"]
+  CORS --> JWT{JWT present?}
+  JWT -- No --> R401["401 Unauthorized"]
+  JWT -- Yes --> VERIFY{Signature valid?}
+  VERIFY -- No --> R401
+  VERIFY -- Yes --> ROLE{Role allowed?}
+  ROLE -- No --> R403["403 Forbidden"]
+  ROLE -- Yes --> SITE{Site access allowed?}
+  SITE -- No --> R403
+  SITE -- Yes --> RATE{Redis rate limit ok?}
+  RATE -- No --> R429["429 Too Many Requests"]
+  RATE -- Yes --> VALIDATE["Pydantic validation"]
+  VALIDATE --> OK["Run service / agent workflow"]
+  OK --> AUDIT["Write audit log"]
+  AUDIT --> RESPONSE["Return response"]

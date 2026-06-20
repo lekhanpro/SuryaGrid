@@ -1,0 +1,63 @@
+"""Suryagrid AI Phase 1 - Solar Nowcasting & DSM Penalty Prediction System."""
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import get_settings
+from app.core.exceptions import AppException, app_exception_handler, validation_exception_handler
+from app.core.logging import logger
+from app.core.rate_limit import init_redis, close_redis
+from app.api.routes_health import router as health_router
+from app.api.routes_synthetic_data import router as synthetic_data_router
+from app.api.routes_sites import router as sites_router
+from app.api.routes_predict import router as predict_router
+from app.api.routes_timeline import router as timeline_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} [{settings.ENVIRONMENT}]")
+    await init_redis()
+    logger.info("Redis initialized")
+    yield
+    await close_redis()
+    logger.info("Shutdown complete")
+
+
+def create_app() -> FastAPI:
+    settings = get_settings()
+
+    app = FastAPI(
+        title=settings.APP_NAME,
+        version=settings.APP_VERSION,
+        description="Solar Nowcasting + DSM Penalty Prediction + Fuzzy Risk Engine",
+        lifespan=lifespan,
+    )
+
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Exception handlers
+    app.add_exception_handler(AppException, app_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+    # Routes
+    app.include_router(health_router, prefix="/api/v1", tags=["health"])
+    app.include_router(sites_router, prefix="/api/v1", tags=["sites"])
+    app.include_router(synthetic_data_router, prefix="/api/v1", tags=["synthetic-data"])
+    app.include_router(predict_router, prefix="/api/v1", tags=["prediction"])
+    app.include_router(timeline_router, prefix="/api/v1", tags=["timeline"])
+
+    return app
+
+
+app = create_app()

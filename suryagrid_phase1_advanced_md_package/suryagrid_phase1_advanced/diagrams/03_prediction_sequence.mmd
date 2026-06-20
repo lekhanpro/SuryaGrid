@@ -1,0 +1,37 @@
+sequenceDiagram
+  autonumber
+  actor User
+  participant FE as Next.js Dashboard
+  participant API as FastAPI
+  participant SEC as Security Agent
+  participant APIM as API Management Agent
+  participant ORC as Orchestrator Agent
+  participant DATA as Toy Data Agent
+  participant FORE as Forecast Agent
+  participant DSM as DSM Classifier Agent
+  participant FUZZ as Fuzzy Risk Agent
+  participant EXPL as Explanation Agent
+  participant DB as PostgreSQL
+
+  User->>FE: Submit prediction request
+  FE->>API: POST /api/v1/predict
+  API->>SEC: Verify JWT + role
+  SEC-->>API: allowed
+  API->>APIM: Validate request + rate limit
+  APIM-->>API: ok
+  API->>ORC: run_prediction_cycle(payload)
+  ORC->>DATA: get toy weather/cloud/schedule
+  DATA->>DB: read/write toy data
+  DATA-->>ORC: normalized input
+  ORC->>FORE: predict_generation(input)
+  FORE-->>ORC: predicted_generation_mw + confidence
+  ORC->>DSM: classify(predicted, scheduled, threshold)
+  DSM-->>ORC: deviation + penalty status + cost
+  ORC->>FUZZ: calculate fuzzy risk
+  FUZZ-->>ORC: score + level
+  ORC->>EXPL: explain result
+  EXPL-->>ORC: explanation text
+  ORC->>DB: save prediction, DSM result, audit log
+  ORC-->>API: complete result
+  API-->>FE: JSON response
+  FE-->>User: Cards + charts + explanation

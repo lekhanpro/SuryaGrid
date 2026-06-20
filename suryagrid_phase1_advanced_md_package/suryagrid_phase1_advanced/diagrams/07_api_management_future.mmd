@@ -1,0 +1,16 @@
+flowchart LR
+  REQ["Data request"] --> APIM["API Management Agent"]
+  APIM --> PHASE1{Phase 1?}
+  PHASE1 -- Yes --> MOCK["Mock Toy Provider"]
+  PHASE1 -- No --> QUOTA{Primary quota ok?}
+  QUOTA -- Yes --> SOL["Solcast Provider"]
+  QUOTA -- No --> FB1["Open-Meteo Fallback"]
+  SOL --> OK{Response ok?}
+  OK -- Yes --> NORM["Normalize canonical schema"]
+  OK -- No --> FB1
+  FB1 --> OK2{Response ok?}
+  OK2 -- Yes --> NORM
+  OK2 -- No --> FB2["NASA POWER Fallback"]
+  FB2 --> NORM
+  NORM --> CACHE["Redis cache"]
+  CACHE --> DB["PostgreSQL/Timescale-ready store"]

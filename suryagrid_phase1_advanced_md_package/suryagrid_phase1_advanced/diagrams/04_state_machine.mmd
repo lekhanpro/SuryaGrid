@@ -1,0 +1,21 @@
+stateDiagram-v2
+  [*] --> RequestReceived
+  RequestReceived --> AuthCheck
+  AuthCheck --> Rejected: invalid token / role
+  AuthCheck --> RateLimitCheck: valid
+  RateLimitCheck --> Rejected: over limit
+  RateLimitCheck --> DataPreparation: allowed
+  DataPreparation --> DataQualityCheck
+  DataQualityCheck --> DataPreparation: missing/outlier toy data
+  DataQualityCheck --> Forecasting: pass
+  Forecasting --> PredictionBoundsCheck
+  PredictionBoundsCheck --> Forecasting: severe formula error
+  PredictionBoundsCheck --> DSMClassification: pass or clamped
+  DSMClassification --> InvalidSchedule: schedule <= 0
+  DSMClassification --> FuzzyRiskScoring: valid schedule
+  FuzzyRiskScoring --> ExplanationGeneration
+  ExplanationGeneration --> PersistResults
+  PersistResults --> PublishResponse
+  PublishResponse --> [*]
+  Rejected --> [*]
+  InvalidSchedule --> PersistResults

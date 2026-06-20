@@ -1,0 +1,24 @@
+flowchart LR
+  START((Start)) --> AUTH{JWT valid?}
+  AUTH -- No --> DENY["Reject request"]
+  AUTH -- Yes --> RATE{Rate limit ok?}
+  RATE -- No --> TOO["429 Too Many Requests"]
+  RATE -- Yes --> ORC["Orchestrator Agent"]
+
+  ORC --> DATA["Toy Data Agent"]
+  DATA --> Q1{Data valid?}
+  Q1 -- No --> FIXDATA["Regenerate / validate toy data"] --> DATA
+  Q1 -- Yes --> FORE["Forecast Agent"]
+
+  FORE --> Q2{Prediction in bounds?}
+  Q2 -- No --> CLAMP["Clamp to 0..capacity"] --> DSM
+  Q2 -- Yes --> DSM["DSM Classifier Agent"]
+
+  DSM --> Q3{Schedule valid?}
+  Q3 -- No --> BAD["INVALID_SCHEDULE"]
+  Q3 -- Yes --> FUZZ["Fuzzy Risk Agent"]
+
+  FUZZ --> EXPL["Explanation Agent"]
+  EXPL --> SAVE["Save DSM result + audit log"]
+  SAVE --> RETURN["Return JSON + dashboard data"]
+  RETURN --> END((End))

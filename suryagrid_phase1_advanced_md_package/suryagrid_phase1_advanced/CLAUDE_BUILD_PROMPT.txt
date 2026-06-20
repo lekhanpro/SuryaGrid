@@ -1,0 +1,15 @@
+You are building Suryagrid AI Phase 1. Read docs/PHASE_1_ADVANCED_IMPLEMENTATION.md completely and implement the project exactly in that order.
+
+Important constraints:
+- Build Phase 1 only.
+- Use toy/synthetic weather, cloud and irradiance data.
+- Use Python 3.12, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Redis, Next.js, TypeScript, Tailwind and Recharts/ECharts.
+- Implement agents as Python classes first.
+- Do not use real APIs yet.
+- Do not implement full RL yet.
+- Do not let an LLM calculate solar generation or DSM values.
+- Add tests for formulas and APIs.
+- Keep provider interfaces ready for Solcast, Open-Meteo and NASA POWER later.
+- Keep security from day one: JWT, roles, audit logging and rate limiting.
+
+Start by scaffolding the repo, then implement backend formulas, agents, routes, DB models, tests, Docker Compose and frontend dashboard.

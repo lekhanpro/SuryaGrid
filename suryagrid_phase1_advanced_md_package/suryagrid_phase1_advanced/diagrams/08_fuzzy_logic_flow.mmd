@@ -1,0 +1,23 @@
+flowchart TD
+  INPUT["DSM + weather inputs"] --> DEV["Deviation percentage"]
+  INPUT --> CLOUD["Cloud cover percentage"]
+  INPUT --> IRR["Irradiance W/m²"]
+  INPUT --> CONF["Confidence score"]
+
+  DEV --> SCORE["Weighted risk score"]
+  CLOUD --> SCORE
+  IRR --> SCORE
+  CONF --> SCORE
+
+  SCORE --> LOW{score < 25?}
+  LOW -- Yes --> L["LOW"]
+  LOW -- No --> MED{score < 50?}
+  MED -- Yes --> M["MEDIUM"]
+  MED -- No --> HIGH{score < 75?}
+  HIGH -- Yes --> H["HIGH"]
+  HIGH -- No --> C["CRITICAL"]
+
+  L --> OUT["fuzzy_risk_level"]
+  M --> OUT
+  H --> OUT
+  C --> OUT

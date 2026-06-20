@@ -1,0 +1,29 @@
+gantt
+  title Suryagrid AI Phase 1 MVP Roadmap
+  dateFormat  YYYY-MM-DD
+  axisFormat  %d %b
+
+  section Foundation
+  Repo + Docker + env setup              :a1, 2026-06-20, 3d
+  FastAPI base + health + docs           :a2, after a1, 3d
+  PostgreSQL models + Alembic            :a3, after a2, 4d
+
+  section Agents
+  Toy Data Agent                         :b1, after a3, 4d
+  Forecast Agent                         :b2, after b1, 3d
+  DSM Classifier Agent                   :b3, after b2, 3d
+  Fuzzy Risk Agent                       :b4, after b3, 3d
+  Explanation Agent                      :b5, after b4, 2d
+
+  section Security + API Management
+  JWT Auth + RBAC                        :c1, after a3, 4d
+  Redis rate limit + audit logs          :c2, after c1, 3d
+
+  section Frontend
+  Next.js dashboard layout               :d1, after b2, 4d
+  Cards + forms + charts                 :d2, after d1, 5d
+  API integration                        :d3, after d2, 3d
+
+  section Quality
+  Unit tests + API tests                 :e1, after b5, 4d
+  README + docs                          :e2, after e1, 3d

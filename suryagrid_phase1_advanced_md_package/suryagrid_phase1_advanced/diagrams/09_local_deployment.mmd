@@ -1,0 +1,24 @@
+flowchart LR
+  subgraph DEV["Local Development"]
+    BROWSER["Browser"]
+    FE["Next.js :3000"]
+    BE["FastAPI :8000"]
+    PG["PostgreSQL :5432"]
+    REDIS["Redis :6379"]
+  end
+
+  subgraph CODE["Repo"]
+    BACKEND["backend/app"]
+    FRONTEND["frontend/app"]
+    DOCS["docs + diagrams"]
+    TESTS["pytest + frontend tests"]
+  end
+
+  BROWSER --> FE
+  FE --> BE
+  BE --> PG
+  BE --> REDIS
+  BACKEND --> BE
+  FRONTEND --> FE
+  DOCS --> BROWSER
+  TESTS --> BE

@@ -1,0 +1,44 @@
+flowchart TB
+  subgraph L3["LEVEL 3 — Experience & Integration"]
+    FE["Next.js Dashboard"]
+    API["FastAPI REST API"]
+    DOCS["Swagger / OpenAPI"]
+    ALERT["Reports & Alerts Stub"]
+  end
+
+  subgraph L2["LEVEL 2 — Intelligence & Agents"]
+    ORC["Orchestrator Agent"]
+    DATA["Toy Data Agent"]
+    FORE["Forecast Agent"]
+    DSM["DSM Classifier Agent"]
+    FUZZ["Fuzzy Risk Agent"]
+    EXPL["Explanation Agent"]
+    APIM["API Management Agent"]
+    SEC["Security Agent"]
+    RLSTUB["Reward/RL Stub"]
+  end
+
+  subgraph L1["LEVEL 1 — Data Foundation"]
+    PG["PostgreSQL"]
+    TS["TimescaleDB-ready schema"]
+    REDIS["Redis cache/rate limit"]
+    CSV["Toy CSV export"]
+    MOCK["Mock Weather/Cloud Provider"]
+  end
+
+  FE --> API
+  DOCS --> API
+  API --> SEC
+  API --> APIM
+  APIM --> ORC
+  ORC --> DATA --> FORE --> DSM --> FUZZ --> EXPL
+  DSM --> RLSTUB
+  DATA --> PG
+  FORE --> PG
+  DSM --> PG
+  FUZZ --> PG
+  APIM --> REDIS
+  MOCK --> DATA
+  PG --> TS
+  PG --> CSV
+  EXPL --> API --> FE
