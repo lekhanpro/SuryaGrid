@@ -6,25 +6,26 @@ interface Props {
   subtitle?: string;
 }
 
-const accents: Record<string, { border: string; bg: string; icon: string }> = {
-  blue:   { border: "border-l-blue-500", bg: "bg-blue-50", icon: "text-blue-500" },
-  red:    { border: "border-l-red-500", bg: "bg-red-50", icon: "text-red-500" },
-  green:  { border: "border-l-emerald-500", bg: "bg-emerald-50", icon: "text-emerald-500" },
-  yellow: { border: "border-l-amber-500", bg: "bg-amber-50", icon: "text-amber-500" },
-  purple: { border: "border-l-purple-500", bg: "bg-purple-50", icon: "text-purple-500" },
-  orange: { border: "border-l-orange-500", bg: "bg-orange-50", icon: "text-orange-500" },
+const accents: Record<string, { bar: string; value: string; glow: string }> = {
+  blue:   { bar: "from-blue-500 to-cyan-400",    value: "text-blue-200",    glow: "shadow-blue-500/10" },
+  red:    { bar: "from-red-500 to-rose-400",     value: "text-red-200",     glow: "shadow-red-500/10" },
+  green:  { bar: "from-emerald-500 to-green-400", value: "text-emerald-200", glow: "shadow-emerald-500/10" },
+  yellow: { bar: "from-amber-500 to-yellow-400", value: "text-amber-200",   glow: "shadow-amber-500/10" },
+  purple: { bar: "from-purple-500 to-fuchsia-400", value: "text-purple-200", glow: "shadow-purple-500/10" },
+  orange: { bar: "from-orange-500 to-amber-400", value: "text-orange-200",  glow: "shadow-orange-500/10" },
 };
 
 export default function MetricCard({ title, value, unit, color = "blue", subtitle }: Props) {
-  const a = accents[color];
+  const a = accents[color] ?? accents.blue;
   return (
-    <div className={`card border-l-4 ${a.border} hover:shadow-md transition-shadow`}>
-      <div className="card-header">{title}</div>
-      <div className="card-value">
+    <div className={`glass-card glass-hover relative overflow-hidden p-5 ${a.glow}`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${a.bar}`} />
+      <div className="eyebrow">{title}</div>
+      <div className={`text-2xl font-bold mt-1.5 ${a.value}`}>
         {value}
-        {unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
+        {unit && <span className="text-sm font-normal text-white/40 ml-1">{unit}</span>}
       </div>
-      {subtitle && <div className="text-xs text-gray-400 mt-1">{subtitle}</div>}
+      {subtitle && <div className="text-xs text-white/35 mt-1">{subtitle}</div>}
     </div>
   );
 }

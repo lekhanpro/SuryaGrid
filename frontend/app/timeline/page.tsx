@@ -27,14 +27,19 @@ export default function TimelinePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto animate-fade-up">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Generation Timeline</h1>
-        <p className="text-gray-500 mt-1">24-hour solar generation forecast with DSM deviation tracking</p>
+        <h1 className="text-3xl font-bold text-white">Generation Timeline</h1>
+        <p className="text-white/40 mt-1">24-hour solar generation forecast with DSM deviation tracking</p>
       </div>
 
       <button onClick={load} disabled={loading} className="btn-primary mb-8">
-        {loading ? "Generating..." : "Generate 24h Forecast"}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            Generating…
+          </span>
+        ) : "Generate 24h Forecast"}
       </button>
 
       {summary && (
@@ -52,30 +57,30 @@ export default function TimelinePage() {
             <MiniTimeline data={timeline.timeline} maxMW={50} />
           </div>
 
-          <div className="card overflow-hidden p-0">
+          <div className="glass-card overflow-hidden p-0">
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                <thead className="table-head sticky top-0 backdrop-blur-md">
                   <tr>
-                    <th className="px-3 py-2.5 text-left font-medium text-gray-600">Time</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-gray-600">Irradiance</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-gray-600">Cloud</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-gray-600">Predicted</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-gray-600">Scheduled</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-gray-600">Deviation</th>
-                    <th className="px-3 py-2.5 text-center font-medium text-gray-600">Status</th>
-                    <th className="px-3 py-2.5 text-center font-medium text-gray-600">Risk</th>
+                    <th className="px-3 py-2.5 text-left font-medium">Time</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Irradiance</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Cloud</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Predicted</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Scheduled</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Deviation</th>
+                    <th className="px-3 py-2.5 text-center font-medium">Status</th>
+                    <th className="px-3 py-2.5 text-center font-medium">Risk</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
                   {timeline.timeline.map((e: TimelineEntry, i: number) => (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 py-2 font-mono text-gray-700">{e.timestamp.split("T")[1]?.slice(0, 5)}</td>
-                      <td className="px-3 py-2 text-right">{e.irradiance_w_m2.toFixed(0)} <span className="text-gray-400">W/m²</span></td>
-                      <td className="px-3 py-2 text-right">{e.cloud_cover_percent.toFixed(0)}%</td>
-                      <td className="px-3 py-2 text-right font-medium">{e.predicted_generation_mw.toFixed(2)} MW</td>
-                      <td className="px-3 py-2 text-right text-gray-500">{e.scheduled_generation_mw.toFixed(2)} MW</td>
-                      <td className="px-3 py-2 text-right font-mono">{e.deviation_percent.toFixed(1)}%</td>
+                    <tr key={i} className="table-row">
+                      <td className="px-3 py-2 font-mono text-white/70">{e.timestamp.split("T")[1]?.slice(0, 5)}</td>
+                      <td className="px-3 py-2 text-right text-white/80">{e.irradiance_w_m2.toFixed(0)} <span className="text-white/30">W/m²</span></td>
+                      <td className="px-3 py-2 text-right text-white/80">{e.cloud_cover_percent.toFixed(0)}%</td>
+                      <td className="px-3 py-2 text-right font-medium text-white">{e.predicted_generation_mw.toFixed(2)} MW</td>
+                      <td className="px-3 py-2 text-right text-white/50">{e.scheduled_generation_mw.toFixed(2)} MW</td>
+                      <td className="px-3 py-2 text-right font-mono text-white/70">{e.deviation_percent.toFixed(1)}%</td>
                       <td className="px-3 py-2 text-center">
                         <span className={`badge ${e.penalty_status === "PENALTY_RISK" ? "badge-red" : "badge-green"}`}>
                           {e.penalty_status === "PENALTY_RISK" ? "PENALTY" : "OK"}
@@ -92,12 +97,12 @@ export default function TimelinePage() {
       )}
 
       {!timeline && !loading && (
-        <div className="card text-center py-16">
-          <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="glass-card text-center py-16">
+          <svg className="w-16 h-16 mx-auto text-white/15 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
-          <h3 className="text-lg font-medium text-gray-600">No Timeline Data</h3>
-          <p className="text-gray-400 mt-1">Generate a 24-hour forecast to view the timeline</p>
+          <h3 className="text-lg font-medium text-white/60">No Timeline Data</h3>
+          <p className="text-white/30 mt-1 text-sm">Generate a 24-hour forecast to view the timeline</p>
         </div>
       )}
     </div>
