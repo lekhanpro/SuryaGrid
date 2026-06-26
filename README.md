@@ -1,157 +1,128 @@
-# Suryagrid AI — Phase 1
+# Suryagrid AI
 
-**Solar Nowcasting + DSM Penalty Prediction + Fuzzy Risk Engine**
+**Solar Irradiance Nowcasting + DSM Penalty Prediction**
 
-## What is Suryagrid AI Phase 1?
+A multi-agent platform that turns real weather/irradiance data into a solar
+generation nowcast, compares it against the scheduled (declared) generation, and
+classifies Deviation Settlement Mechanism (DSM) penalty risk with estimated cost.
 
-Suryagrid AI is a multi-agent solar energy monitoring platform. Phase 1 is the operational foundation that:
+## What it does
 
-- Predicts solar generation from weather/irradiance conditions
-- Compares predicted generation against scheduled/agreement MW
-- Classifies DSM (Deviation Settlement Mechanism) threshold violations
-- Assigns fuzzy risk levels (LOW / MEDIUM / HIGH / CRITICAL)
-- Estimates penalty costs for grid deviations
-- Provides timeline and summary views for operational monitoring
+1. Pulls **real hourly irradiance** (GHI / DNI / DHI), temperature, cloud cover and
+   wind for any site from **Open-Meteo** (free, no API key).
+2. Computes **physics-based AC generation** with **pvlib** (solar position →
+   plane-of-array transposition → cell temperature → PVWatts DC → inverter AC).
+3. Derives the **day-ahead committed schedule** from a clear-sky model — the
+   realistic baseline a generator declares to the grid.
+4. Runs **DSM classification**: deviation vs the allowed band → `NO_PENALTY` /
+   `PENALTY_RISK` / `INVALID_SCHEDULE`, with an estimated charge on the deviated energy.
+5. Scores **operational risk** (LOW / MEDIUM / HIGH / CRITICAL) and produces a
+   human-readable explanation.
+6. Serves a **24h+ timeline** (time, generation, energy, expected DSM values) and a
+   day summary, rendered in a Next.js dashboard.
 
-## Why Synthetic Data in Phase 1?
-
-Phase 1 uses deterministic synthetic weather data to validate the complete prediction pipeline without external API dependencies. The system architecture supports future integration with Solcast, Open-Meteo, and NASA POWER through a provider abstraction layer. All formulas and logic are production-ready — only the data source changes in later phases.
+All numbers are deterministic and reproducible — pvlib does the math, no LLM in the
+numeric path.
 
 ## Architecture
 
 ```
-Solar Irradiance + Weather/Cloud Data + Site Configuration
-    │
-    ▼
-┌─────────────────────────────────────────────────────┐
-│  SyntheticDataAgent (Phase 1 local data provider)   │
-└───────────────────────┬─────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  ForecastAgent (solar generation prediction)         │
-└───────────────────────┬─────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  DSMClassifierAgent (deviation + penalty logic)      │
-└───────────────────────┬─────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  FuzzyRiskAgent (risk scoring 0-100)                 │
-└───────────────────────┬─────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  ExplanationAgent (human-readable analysis)          │
-└───────────────────────┬─────────────────────────────┘
-                        ▼
-          FastAPI REST API + Next.js Dashboard
+Open-Meteo (real GHI/DNI/DHI, temp, cloud, wind)
+      │
+      ▼
+ForecastAgent (pvlib)  ── clear-sky baseline ──┐
+      │ nowcast (cloud-affected)               │ scheduled MW
+      ▼                                         ▼
+DSMClassifierAgent  ── deviation vs band ──► penalty / cost
+      │
+      ▼
+RiskAgent ──► ExplanationAgent ──► FastAPI ──► Next.js dashboard
+(OrchestratorAgent sequences the per-interval pipeline; ForecastService runs the timeline.)
 ```
 
-## Agent Pipeline
+## Agents
 
 | Agent | Responsibility |
 |-------|---------------|
-| SyntheticDataAgent | Generates simulated weather/irradiance/schedule data |
-| ForecastAgent | Predicts solar generation using physics-based formula |
-| DSMClassifierAgent | Compares predicted vs scheduled MW, flags penalty risk |
-| FuzzyRiskAgent | Assigns risk level based on deviation + conditions |
-| ExplanationAgent | Produces human-readable analysis text |
-| OrchestratorAgent | Coordinates the full pipeline in sequence |
+| ForecastAgent | pvlib physics: irradiance → POA → cell temp → AC power (MW) + confidence |
+| DSMClassifierAgent | Deviation vs allowed band, penalty status and chargeable cost |
+| RiskAgent | Deterministic 0–100 risk score and LOW/MEDIUM/HIGH/CRITICAL level |
+| ExplanationAgent | Plain-language interval summary |
+| OrchestratorAgent | Sequences the agents for a single interval |
 
-## Run Commands
+## Data provider
 
-### Backend (local)
+`app/providers/` defines a `WeatherProvider` interface; `OpenMeteoProvider` is the
+default real source. New sources (Solcast, NASA POWER) implement the same interface
+and the pvlib pipeline runs unchanged.
 
+## Run
+
+### Backend
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
+API docs: http://localhost:8000/docs
 
-API Docs: http://localhost:8000/docs
+### Live demo (real data, no server needed)
+```bash
+cd backend
+python run_all_demo.py
+```
 
-### Frontend (local)
-
+### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
 Dashboard: http://localhost:3000
 
 > Note: the dashboard is served at the root path `/` in all environments.
 
 ### Docker Compose (full stack)
-
 ```bash
 docker-compose up --build
 ```
 
-- Backend: http://localhost:8000
-- Frontend: http://localhost:3000
-- PostgreSQL: localhost:5432
-- Redis: localhost:6379
-
-## API Endpoints
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/health` | System health check |
-| POST | `/api/v1/sites` | Create solar site |
-| GET | `/api/v1/sites` | List all sites |
-| GET | `/api/v1/sites/{id}` | Get site details |
-| POST | `/api/v1/synthetic-data/generate` | Generate weather data |
-| GET | `/api/v1/synthetic-data/{site_id}` | Retrieve generated data |
-| POST | `/api/v1/predict` | Run full prediction cycle |
-| POST | `/api/v1/dsm/check` | Standalone DSM check |
-| GET | `/api/v1/timeline/{site_id}` | 24h prediction timeline |
-| GET | `/api/v1/summary/{site_id}` | Day summary statistics |
+| GET | `/api/v1/health` | Health check |
+| POST | `/api/v1/sites` | Register a solar site |
+| GET | `/api/v1/sites` / `/sites/{id}` | List / get sites |
+| GET | `/api/v1/weather/{site_id}` | Real hourly irradiance/weather |
+| POST | `/api/v1/predict` | Single-interval DSM evaluation from explicit irradiance |
+| POST | `/api/v1/dsm/check` | Standalone DSM classification |
+| GET | `/api/v1/timeline/{site_id}` | Hourly nowcast + DSM timeline + summary |
+| GET | `/api/v1/summary/{site_id}` | Day summary |
 
-## Test Commands
+`timeline`/`summary`/`weather` accept query params (`latitude`, `longitude`,
+`capacity_mw`, `tilt`, `azimuth`, `scheduled_mw`, `threshold_percent`,
+`penalty_rate`, `forecast_days`) so any location works without pre-registering a site.
 
+## Test
 ```bash
 cd backend
-python tests/test_phase1_acceptance.py    # 12 acceptance tests
-python tests/test_forecast_agent.py       # Forecast formula tests
-python tests/test_dsm_classifier.py       # DSM logic tests
-python tests/test_fuzzy_risk.py           # Risk scoring tests
-python tests/test_orchestrator.py         # Pipeline tests
-python tests/test_api.py                  # API integration tests
+python -m pytest tests/ -q
 ```
+Tests use a deterministic offline provider, so they never depend on the network.
 
-## Phase 1 Success Criteria
+## Tech stack
 
-1. Backend starts successfully
-2. Synthetic weather data generation works
-3. Solar prediction formula is deterministic and tested
-4. DSM penalty classification works correctly
-5. Fuzzy risk scoring assigns correct levels
-6. Explanation text is generated
-7. Timeline API returns graph-ready data
-8. Summary API returns correct totals
-9. No divide-by-zero on invalid schedules
-10. Prediction never exceeds solar capacity
-11. API response schema is stable and timestamped
-12. No external API keys required
-13. All tests pass
-
-## What is NOT Included in Phase 1
-
-- Real weather API integrations (Solcast, Open-Meteo, NASA POWER)
-- Reinforcement learning / reward engine
-- Blockchain settlement
-- SCADA / hardware integration
-- Multi-tenant authentication (Auth0/Keycloak)
-- Energy trading platform
-- Cloud camera system
-- Production deployment infrastructure
-
-These are planned for later phases and the architecture supports their addition.
-
-## Tech Stack
-
-- **Backend**: Python 3.12, FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Redis
+- **Backend**: Python 3.11+, FastAPI, Pydantic, pvlib, pandas/numpy, httpx
+- **Data**: Open-Meteo (real, free, key-less)
 - **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Agents**: Python classes (LangGraph-ready structure)
-- **Testing**: pytest, httpx ASGI transport
-- **Deployment**: Docker Compose
+- **Optional**: PostgreSQL + Redis (degrade gracefully if absent)
+- **Deploy**: Docker Compose
+
+## Notes & next steps
+
+- Site registry is in-memory; SQLAlchemy models exist in `app/db` for PostgreSQL
+  persistence in a clustered deployment.
+- JWT auth and per-route rate limiting are scaffolded but not enforced yet.
+- An RL policy for adaptive penalty/discount rates (see `PROJECT_PLAN.md`) is the
+  planned next phase; the deterministic forecast + DSM core it depends on is done.

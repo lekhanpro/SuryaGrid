@@ -10,7 +10,7 @@ from app.core.exceptions import AppException, app_exception_handler, validation_
 from app.core.logging import logger
 from app.core.rate_limit import init_redis, close_redis
 from app.api.routes_health import router as health_router
-from app.api.routes_synthetic_data import router as synthetic_data_router
+from app.api.routes_weather import router as weather_router
 from app.api.routes_sites import router as sites_router
 from app.api.routes_predict import router as predict_router
 from app.api.routes_timeline import router as timeline_router
@@ -33,7 +33,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
-        description="Solar Nowcasting + DSM Penalty Prediction + Fuzzy Risk Engine",
+        description="Solar Irradiance Nowcasting + DSM Penalty Prediction (Open-Meteo + pvlib)",
         lifespan=lifespan,
     )
 
@@ -53,7 +53,7 @@ def create_app() -> FastAPI:
     # Routes
     app.include_router(health_router, prefix="/api/v1", tags=["health"])
     app.include_router(sites_router, prefix="/api/v1", tags=["sites"])
-    app.include_router(synthetic_data_router, prefix="/api/v1", tags=["synthetic-data"])
+    app.include_router(weather_router, prefix="/api/v1", tags=["weather"])
     app.include_router(predict_router, prefix="/api/v1", tags=["prediction"])
     app.include_router(timeline_router, prefix="/api/v1", tags=["timeline"])
 

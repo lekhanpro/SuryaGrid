@@ -4,11 +4,14 @@ import { predict } from "@/lib/api";
 import type { PredictResult } from "@/lib/types";
 
 const SCENARIOS = [
-  { label: "Clear Sky", desc: "Optimal conditions", irradiance: 950, cloud: 5, temp: 25, accent: "from-amber-400 to-orange-500", icon: "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" },
-  { label: "Partly Cloudy", desc: "Moderate output", irradiance: 700, cloud: 40, temp: 32, accent: "from-blue-400 to-cyan-500", icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" },
-  { label: "Overcast", desc: "Significant losses", irradiance: 350, cloud: 75, temp: 30, accent: "from-slate-400 to-slate-500", icon: "M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" },
-  { label: "Storm", desc: "Minimal generation", irradiance: 100, cloud: 90, temp: 28, accent: "from-purple-400 to-indigo-500", icon: "M11.412 15.655L9.75 21.75l3.745-4.012M9.257 13.5H3.75l2.659-2.849m2.048-2.194L14.25 2.25 12 10.5h8.25l-4.707 5.043" },
+  { label: "Clear Sky", desc: "Optimal conditions", ghi: 950, dni: 820, dhi: 110, cloud: 5, temp: 25, accent: "from-amber-400 to-orange-500", icon: "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" },
+  { label: "Partly Cloudy", desc: "Moderate output", ghi: 620, dni: 400, dhi: 240, cloud: 45, temp: 32, accent: "from-blue-400 to-cyan-500", icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" },
+  { label: "Overcast", desc: "Significant losses", ghi: 300, dni: 90, dhi: 230, cloud: 80, temp: 30, accent: "from-slate-400 to-slate-500", icon: "M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" },
+  { label: "Storm", desc: "Minimal generation", ghi: 110, dni: 20, dhi: 95, cloud: 95, temp: 28, accent: "from-purple-400 to-indigo-500", icon: "M11.412 15.655L9.75 21.75l3.745-4.012M9.257 13.5H3.75l2.659-2.849m2.048-2.194L14.25 2.25 12 10.5h8.25l-4.707 5.043" },
 ];
+
+const CAPACITY = 100;
+const SCHEDULED = 70;
 
 export default function Predictions() {
   const [results, setResults] = useState<(PredictResult & { label: string; desc: string })[]>([]);
@@ -18,22 +21,27 @@ export default function Predictions() {
     setLoading(true);
     try {
       const batch = await Promise.all(
-        SCENARIOS.map(async (s) => {
+        SCENARIOS.map(async (sc) => {
           const r = await predict({
-            site_id: "primary-site",
-            solar_capacity_mw: 50,
-            irradiance_w_m2: s.irradiance,
-            cloud_cover_percent: s.cloud,
-            temperature_c: s.temp,
-            scheduled_generation_mw: 35,
+            capacity_mw: CAPACITY,
+            latitude: 27.53,
+            longitude: 71.91,
+            ghi_w_m2: sc.ghi,
+            dni_w_m2: sc.dni,
+            dhi_w_m2: sc.dhi,
+            cloud_cover_percent: sc.cloud,
+            temperature_c: sc.temp,
+            scheduled_generation_mw: SCHEDULED,
             allowed_dsm_threshold_percent: 10,
-            penalty_rate_per_mw: 15000,
+            penalty_rate_per_mwh: 12000,
           });
-          return { ...r, label: s.label, desc: s.desc };
+          return { ...r, label: sc.label, desc: sc.desc };
         })
       );
       setResults(batch);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) {
+      alert(e.message);
+    }
     setLoading(false);
   };
 
@@ -46,10 +54,11 @@ export default function Predictions() {
     <div className="max-w-7xl mx-auto animate-fade-up">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">Scenario Analysis</h1>
-        <p className="text-white/40 mt-1">Compare DSM outcomes across representative weather regimes</p>
+        <p className="text-white/40 mt-1">
+          DSM outcomes across weather regimes · {CAPACITY} MW plant, {SCHEDULED} MW scheduled (pvlib physics)
+        </p>
       </div>
 
-      {/* Scenario Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {SCENARIOS.map((s, i) => (
           <div key={i} className="glass-card glass-hover p-5 text-center">
@@ -59,7 +68,7 @@ export default function Predictions() {
               </svg>
             </div>
             <div className="font-semibold text-sm text-white">{s.label}</div>
-            <div className="text-[11px] text-white/40 mt-0.5">{s.irradiance} W/m² · {s.cloud}% cloud</div>
+            <div className="text-[11px] text-white/40 mt-0.5">{s.ghi} W/m² · {s.cloud}% cloud</div>
           </div>
         ))}
       </div>
@@ -104,7 +113,7 @@ export default function Predictions() {
                     <td className="px-5 py-4 text-right font-mono text-white/80">
                       {r.estimated_penalty_cost > 0 ? `\u20B9${r.estimated_penalty_cost.toLocaleString()}` : "\u2014"}
                     </td>
-                    <td className="px-5 py-4 text-center">{riskBadge(r.fuzzy_risk_level)}</td>
+                    <td className="px-5 py-4 text-center">{riskBadge(r.risk_level)}</td>
                   </tr>
                 ))}
               </tbody>

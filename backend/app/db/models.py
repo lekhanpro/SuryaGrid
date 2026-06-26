@@ -1,10 +1,25 @@
-"""Database models for Suryagrid AI Phase 1."""
+"""Database models for Suryagrid AI.
+
+These back optional PostgreSQL persistence. The running app uses an in-memory
+site store and live provider data; these models exist for clustered deployments.
+"""
 
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Float, Integer, DateTime, ForeignKey, JSON, Text, func
+
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.database import Base
 
 
@@ -14,7 +29,7 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False, default="viewer")  # admin, operator, viewer
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="viewer")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")
@@ -30,15 +45,16 @@ class Site(Base):
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     timezone: Mapped[str] = mapped_column(String(50), default="Asia/Kolkata")
     capacity_mw: Mapped[float] = mapped_column(Float, nullable=False)
-    panel_efficiency: Mapped[float] = mapped_column(Float, default=0.18)
-    tilt: Mapped[float] = mapped_column(Float, default=15.0)
+    tilt: Mapped[float] = mapped_column(Float, default=20.0)
     azimuth: Mapped[float] = mapped_column(Float, default=180.0)
+    altitude: Mapped[float] = mapped_column(Float, default=0.0)
+    allowed_dsm_threshold_percent: Mapped[float] = mapped_column(Float, default=10.0)
+    penalty_rate_per_mwh: Mapped[float] = mapped_column(Float, default=12000.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     site_accesses: Mapped[list["SiteAccess"]] = relationship(back_populates="site")
-    weather_readings: Mapped[list["ToyWeatherReading"]] = relationship(back_populates="site")
+    weather_readings: Mapped[list["WeatherReading"]] = relationship(back_populates="site")
     generation_readings: Mapped[list["GenerationReading"]] = relationship(back_populates="site")
-    schedule_windows: Mapped[list["ScheduleWindow"]] = relationship(back_populates="site")
     dsm_results: Mapped[list["DSMResult"]] = relationship(back_populates="site")
 
 
@@ -54,18 +70,19 @@ class SiteAccess(Base):
     site: Mapped["Site"] = relationship(back_populates="site_accesses")
 
 
-class ToyWeatherReading(Base):
-    __tablename__ = "toy_weather_readings"
+class WeatherReading(Base):
+    __tablename__ = "weather_readings"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    irradiance_w_m2: Mapped[float] = mapped_column(Float, nullable=False)
-    cloud_cover_percent: Mapped[float] = mapped_column(Float, nullable=False)
+    ghi_w_m2: Mapped[float] = mapped_column(Float, nullable=False)
+    dni_w_m2: Mapped[float] = mapped_column(Float, default=0.0)
+    dhi_w_m2: Mapped[float] = mapped_column(Float, default=0.0)
     temperature_c: Mapped[float] = mapped_column(Float, nullable=False)
-    humidity_percent: Mapped[float] = mapped_column(Float, default=50.0)
+    cloud_cover_percent: Mapped[float] = mapped_column(Float, nullable=False)
     wind_speed_mps: Mapped[float] = mapped_column(Float, default=2.0)
-    rain_probability_percent: Mapped[float] = mapped_column(Float, default=0.0)
+    source: Mapped[str] = mapped_column(String(50), default="open-meteo")
     quality_flag: Mapped[int] = mapped_column(Integer, default=1)
 
     site: Mapped["Site"] = relationship(back_populates="weather_readings")
@@ -79,24 +96,9 @@ class GenerationReading(Base):
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     actual_generation_mw: Mapped[float] = mapped_column(Float, nullable=True)
     predicted_generation_mw: Mapped[float] = mapped_column(Float, nullable=True)
-    source: Mapped[str] = mapped_column(String(50), default="toy")
+    source: Mapped[str] = mapped_column(String(50), default="pvlib")
 
     site: Mapped["Site"] = relationship(back_populates="generation_readings")
-
-
-class ScheduleWindow(Base):
-    __tablename__ = "schedule_windows"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
-    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    scheduled_generation_mw: Mapped[float] = mapped_column(Float, nullable=False)
-    allowed_dsm_threshold_percent: Mapped[float] = mapped_column(Float, default=10.0)
-    penalty_rate_per_mw: Mapped[float] = mapped_column(Float, default=1000.0)
-
-    site: Mapped["Site"] = relationship(back_populates="schedule_windows")
-    dsm_results: Mapped[list["DSMResult"]] = relationship(back_populates="schedule_window")
 
 
 class DSMResult(Base):
@@ -104,7 +106,6 @@ class DSMResult(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
-    schedule_window_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("schedule_windows.id"), nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     predicted_generation_mw: Mapped[float] = mapped_column(Float, nullable=False)
     scheduled_generation_mw: Mapped[float] = mapped_column(Float, nullable=False)
@@ -112,13 +113,12 @@ class DSMResult(Base):
     deviation_percent: Mapped[float] = mapped_column(Float, nullable=False)
     penalty_status: Mapped[str] = mapped_column(String(30), nullable=False)
     estimated_penalty_cost: Mapped[float] = mapped_column(Float, default=0.0)
-    fuzzy_risk_score: Mapped[float] = mapped_column(Float, default=0.0)
-    fuzzy_risk_level: Mapped[str] = mapped_column(String(20), default="LOW")
+    risk_score: Mapped[float] = mapped_column(Float, default=0.0)
+    risk_level: Mapped[str] = mapped_column(String(20), default="LOW")
     confidence_score: Mapped[float] = mapped_column(Float, default=0.8)
     explanation: Mapped[str] = mapped_column(Text, nullable=True)
 
     site: Mapped["Site"] = relationship(back_populates="dsm_results")
-    schedule_window: Mapped["ScheduleWindow"] = relationship(back_populates="dsm_results")
 
 
 class AuditLog(Base):

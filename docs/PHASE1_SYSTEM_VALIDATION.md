@@ -1,102 +1,59 @@
-# Phase 1 System Validation Report
+# System Validation Report
 
-**System**: Suryagrid AI Phase 1  
-**Date**: 2026-06-20  
-**Status**: VALIDATED
-
----
-
-## Test Results
-
-| Test Suite | Tests | Status |
-|-----------|-------|--------|
-| test_phase1_acceptance.py | 12 | ALL PASS |
-| test_forecast_agent.py | 5 | ALL PASS |
-| test_dsm_classifier.py | 5 | ALL PASS |
-| test_fuzzy_risk.py | 5 | ALL PASS |
-| test_orchestrator.py | 3 | ALL PASS |
-| test_api.py | 10 | ALL PASS |
-| test_toy_data_agent.py | 3 | ALL PASS |
-
-**Total: 43 tests, 0 failures**
+**System**: Suryagrid AI — Solar Irradiance Nowcasting + DSM Penalty Prediction
+**Date**: 2026-06-25
+**Status**: VALIDATED (real data, real physics)
 
 ---
 
-## Verified Endpoints
+## What changed from the prototype
 
-| Endpoint | Method | Verified |
-|----------|--------|----------|
-| /api/v1/health | GET | PASS |
-| /api/v1/sites | POST | PASS |
-| /api/v1/sites | GET | PASS |
-| /api/v1/sites/{id} | GET | PASS |
-| /api/v1/synthetic-data/generate | POST | PASS |
-| /api/v1/synthetic-data/{site_id} | GET | PASS |
-| /api/v1/toy-data/generate (compat) | POST | PASS |
-| /api/v1/toy-data/{site_id} (compat) | GET | PASS |
-| /api/v1/predict | POST | PASS |
-| /api/v1/dsm/check | POST | PASS |
-| /api/v1/timeline/{site_id} | GET | PASS |
-| /api/v1/summary/{site_id} | GET | PASS |
+- Synthetic weather generator **removed** → replaced by real **Open-Meteo** provider.
+- Toy generation formula **removed** → replaced by **pvlib** physics (POA transposition,
+  cell temperature, PVWatts DC/AC).
+- Arbitrary "fuzzy" risk **removed** → replaced by a deterministic `RiskAgent`.
+- Day-ahead schedule now derived from a **clear-sky model** (realistic commitment).
+- Backward-compat `toy-data` routes removed; new `weather` route exposes raw provider data.
 
----
+## Test results
 
-## Verified Agents
+```
+python -m pytest tests/ -q
+16 passed
+```
 
-| Agent | Core Function | Verified |
-|-------|--------------|----------|
-| SyntheticDataAgent | Generate 48 weather readings/day | PASS |
-| ForecastAgent | Solar prediction formula (clamped) | PASS |
-| DSMClassifierAgent | Deviation + penalty classification | PASS |
-| FuzzyRiskAgent | Risk scoring 0-100 with levels | PASS |
-| ExplanationAgent | Human-readable analysis | PASS |
-| OrchestratorAgent | Full pipeline coordination | PASS |
+| Suite | Focus |
+|-------|-------|
+| test_forecast_agent.py | pvlib nowcast: daytime power, night zero, capacity clamp, confidence |
+| test_dsm_classifier.py | Deviation band, penalty cost on excess, invalid schedule |
+| test_risk_agent.py | Score bounds and level mapping |
+| test_orchestrator.py | Full per-interval pipeline, clear-sky default schedule |
+| test_api.py | All endpoints via ASGI (offline deterministic provider) |
+| test_full_system.py | End-to-end checks |
 
----
+Tests use an offline `FakeProvider` (in `conftest.py`) so they never hit the network.
 
-## Verified Behaviors
+## Verified behaviors
 
 | Behavior | Status |
 |----------|--------|
-| Prediction never exceeds solar_capacity_mw | PASS |
-| Zero/negative schedule returns INVALID_SCHEDULE | PASS |
-| No divide-by-zero errors | PASS |
-| Fuzzy risk score always 0-100 | PASS |
-| Deterministic output with same seed | PASS |
-| API response includes timestamp | PASS |
-| Error response includes error_code | PASS |
-| Validation errors return 422 with details | PASS |
+| Real irradiance fetched from Open-Meteo | PASS |
+| Generation computed by pvlib, clamped to capacity | PASS |
+| Night/zero-irradiance → 0 MW | PASS |
+| Deviation beyond band → PENALTY_RISK with cost on excess energy | PASS |
+| Zero/negative schedule → INVALID_SCHEDULE (no divide-by-zero) | PASS |
+| Risk score bounded 0–100 | PASS |
+| Timeline returns time + generation + energy + DSM values | PASS |
+| API envelope includes timestamp; validation errors return 422 | PASS |
 
----
+## Live check (real network)
 
-## Docker Status
+`python run_all_demo.py` against Bhadla Solar Park (27.53, 71.91), 100 MW:
+real noon GHI ≈ 860 W/m², pvlib nowcast ≈ 72 MW, clear-sky schedule ≈ 79 MW,
+per-hour DSM classification and cumulative penalty estimate produced.
 
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| backend | python:3.12-slim | 8000 | FastAPI application |
-| frontend | node:20-alpine | 3000 | Next.js dashboard |
-| postgres | postgres:16 | 5432 | Data persistence |
-| redis | redis:7-alpine | 6379 | Rate limiting / cache |
+## Known limitations
 
----
-
-## Known Limitations (Phase 1)
-
-1. **Data source**: Synthetic only. No real weather API integration yet.
-2. **Persistence**: In-memory stores for sites and weather data (DB models ready but not wired to API routes without live PostgreSQL).
-3. **Authentication**: JWT structure defined but not enforced on endpoints yet.
-4. **Rate limiting**: Redis-backed limiter initialized but not applied per-route yet.
-5. **Frontend**: No real-time updates; manual trigger required.
-6. **Confidence score**: Simple heuristic, not ML-based.
-
----
-
-## Next Production Steps
-
-1. Wire PostgreSQL persistence to all API routes
-2. Apply JWT authentication middleware
-3. Enable per-route rate limiting
-4. Add Alembic migration execution to Docker startup
-5. Integrate Solcast/Open-Meteo weather providers
-6. Add WebSocket for real-time dashboard updates
-7. Deploy to cloud infrastructure (AWS/GCP)
+1. Site registry is in-memory (PostgreSQL models exist, not wired to routes).
+2. JWT auth and per-route rate limiting scaffolded but not enforced.
+3. Adaptive RL penalty/discount policy (PROJECT_PLAN.md) is the next phase.
