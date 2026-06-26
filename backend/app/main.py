@@ -17,16 +17,20 @@ from app.config import get_settings
 from app.core.exceptions import AppException, app_exception_handler, validation_exception_handler
 from app.core.logging import logger
 from app.core.rate_limit import close_redis, init_redis
+from app.db.database import dispose_db, init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} [{settings.ENVIRONMENT}]")
+    await init_db()
+    logger.info("Database initialized")
     await init_redis()
     logger.info("Redis initialized")
     yield
     await close_redis()
+    await dispose_db()
     logger.info("Shutdown complete")
 
 

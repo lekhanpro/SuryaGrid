@@ -1,7 +1,7 @@
 """Database models for Suryagrid AI.
 
-These back optional PostgreSQL persistence. The running app uses an in-memory
-site store and live provider data; these models exist for clustered deployments.
+Portable across SQLite (default, local) and PostgreSQL/TimescaleDB (production)
+via the GUID type. Mirrors the ER diagram in PROJECT_PLAN.md section 8.
 """
 
 import uuid
@@ -17,29 +17,40 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+from app.db.types import GUID
 
 
-class User(Base):
-    __tablename__ = "users"
+class Owner(Base):
+    __tablename__ = "owners"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False, default="viewer")
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")
-    site_accesses: Mapped[list["SiteAccess"]] = relationship(back_populates="user")
+    sites: Mapped[list["Site"]] = relationship(back_populates="owner")
+
+
+class Consumer(Base):
+    __tablename__ = "consumers"
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    profile: Mapped[str] = mapped_column(String(50), default="commercial")
+    base_load_kw: Mapped[float] = mapped_column(Float, default=50.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    settlements: Mapped[list["Settlement"]] = relationship(back_populates="consumer")
 
 
 class Site(Base):
     __tablename__ = "sites"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("owners.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
@@ -52,85 +63,93 @@ class Site(Base):
     penalty_rate_per_mwh: Mapped[float] = mapped_column(Float, default=12000.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    site_accesses: Mapped[list["SiteAccess"]] = relationship(back_populates="site")
-    weather_readings: Mapped[list["WeatherReading"]] = relationship(back_populates="site")
-    generation_readings: Mapped[list["GenerationReading"]] = relationship(back_populates="site")
-    dsm_results: Mapped[list["DSMResult"]] = relationship(back_populates="site")
+    owner: Mapped["Owner"] = relationship(back_populates="sites")
+    readings: Mapped[list["Reading"]] = relationship(
+        back_populates="site", cascade="all, delete-orphan"
+    )
+    forecasts: Mapped[list["Forecast"]] = relationship(
+        back_populates="site", cascade="all, delete-orphan"
+    )
+    settlements: Mapped[list["Settlement"]] = relationship(
+        back_populates="site", cascade="all, delete-orphan"
+    )
 
 
-class SiteAccess(Base):
-    __tablename__ = "site_access"
+class Reading(Base):
+    __tablename__ = "readings"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False, default="viewer")
-
-    user: Mapped["User"] = relationship(back_populates="site_accesses")
-    site: Mapped["Site"] = relationship(back_populates="site_accesses")
-
-
-class WeatherReading(Base):
-    __tablename__ = "weather_readings"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    site_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("sites.id"), nullable=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    ghi_w_m2: Mapped[float] = mapped_column(Float, nullable=False)
-    dni_w_m2: Mapped[float] = mapped_column(Float, default=0.0)
-    dhi_w_m2: Mapped[float] = mapped_column(Float, default=0.0)
-    temperature_c: Mapped[float] = mapped_column(Float, nullable=False)
-    cloud_cover_percent: Mapped[float] = mapped_column(Float, nullable=False)
-    wind_speed_mps: Mapped[float] = mapped_column(Float, default=2.0)
+    ghi: Mapped[float] = mapped_column(Float, nullable=False)
+    dni: Mapped[float] = mapped_column(Float, default=0.0)
+    dhi: Mapped[float] = mapped_column(Float, default=0.0)
+    temp: Mapped[float] = mapped_column(Float, nullable=False)
+    cloud_cover: Mapped[float] = mapped_column(Float, nullable=False)
+    wind: Mapped[float] = mapped_column(Float, default=2.0)
     source: Mapped[str] = mapped_column(String(50), default="open-meteo")
     quality_flag: Mapped[int] = mapped_column(Integer, default=1)
 
-    site: Mapped["Site"] = relationship(back_populates="weather_readings")
+    site: Mapped["Site"] = relationship(back_populates="readings")
 
 
-class GenerationReading(Base):
-    __tablename__ = "generation_readings"
+class Forecast(Base):
+    __tablename__ = "forecasts"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    site_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("sites.id"), nullable=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    actual_generation_mw: Mapped[float] = mapped_column(Float, nullable=True)
-    predicted_generation_mw: Mapped[float] = mapped_column(Float, nullable=True)
-    source: Mapped[str] = mapped_column(String(50), default="pvlib")
+    predicted_kw: Mapped[float] = mapped_column(Float, nullable=False)
+    clearsky_kw: Mapped[float] = mapped_column(Float, default=0.0)
+    confidence: Mapped[float] = mapped_column(Float, default=0.8)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    site: Mapped["Site"] = relationship(back_populates="generation_readings")
+    site: Mapped["Site"] = relationship(back_populates="forecasts")
 
 
-class DSMResult(Base):
-    __tablename__ = "dsm_results"
+class Settlement(Base):
+    __tablename__ = "settlements"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    site_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sites.id"), nullable=False)
-    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    predicted_generation_mw: Mapped[float] = mapped_column(Float, nullable=False)
-    scheduled_generation_mw: Mapped[float] = mapped_column(Float, nullable=False)
-    deviation_mw: Mapped[float] = mapped_column(Float, nullable=False)
-    deviation_percent: Mapped[float] = mapped_column(Float, nullable=False)
-    penalty_status: Mapped[str] = mapped_column(String(30), nullable=False)
-    estimated_penalty_cost: Mapped[float] = mapped_column(Float, default=0.0)
-    risk_score: Mapped[float] = mapped_column(Float, default=0.0)
-    risk_level: Mapped[str] = mapped_column(String(20), default="LOW")
-    confidence_score: Mapped[float] = mapped_column(Float, default=0.8)
-    explanation: Mapped[str] = mapped_column(Text, nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    site_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("sites.id"), nullable=False)
+    consumer_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("consumers.id"), nullable=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    target_kw: Mapped[float] = mapped_column(Float, nullable=False)
+    actual_kw: Mapped[float] = mapped_column(Float, nullable=False)
+    penalty: Mapped[float] = mapped_column(Float, default=0.0)
+    bonus: Mapped[float] = mapped_column(Float, default=0.0)
+    discount: Mapped[float] = mapped_column(Float, default=0.0)
+    net_owner: Mapped[float] = mapped_column(Float, default=0.0)
+    penalty_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    bonus_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    discount_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    site: Mapped["Site"] = relationship(back_populates="dsm_results")
+    site: Mapped["Site"] = relationship(back_populates="settlements")
+    consumer: Mapped["Consumer"] = relationship(back_populates="settlements")
+
+
+class TrainingRun(Base):
+    __tablename__ = "training_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    algorithm: Mapped[str] = mapped_column(String(50), default="REINFORCE")
+    episodes: Mapped[int] = mapped_column(Integer, nullable=False)
+    data_source: Mapped[str] = mapped_column(String(50), default="open-meteo-archive")
+    best_reward: Mapped[float] = mapped_column(Float, nullable=False)
+    mean_reward: Mapped[float] = mapped_column(Float, default=0.0)
+    final_rates: Mapped[dict] = mapped_column(JSON, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     entity_type: Mapped[str] = mapped_column(String(50), nullable=True)
-    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=True)
+    entity_id: Mapped[uuid.UUID] = mapped_column(GUID, nullable=True)
     details: Mapped[dict] = mapped_column(JSON, nullable=True)
-    ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    user: Mapped["User"] = relationship(back_populates="audit_logs")

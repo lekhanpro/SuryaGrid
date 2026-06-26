@@ -28,3 +28,22 @@ OpenMeteoProvider → ForecastAgent (pvlib) → DSMClassifierAgent → RiskAgent
 ```
 The schedule defaults to the clear-sky baseline (a realistic day-ahead commitment)
 and can be overridden per request.
+
+## Reward & RL (PROJECT_PLAN sections 5-6)
+- **RewardAgent** — penalty/bonus/discount settlement (owner target vs actual).
+- **RL digital twin** — `SolarSettlementEnv` (synthetic) and `RealDataSettlementEnv`
+  (real historical days from the Open-Meteo archive run through pvlib). A numpy
+  REINFORCE trainer optimizes the rate policy; runs are persisted as `TrainingRun`.
+
+## Energy (PROJECT_PLAN section 7)
+- **EnergyService** — production vs consumption per interval: surplus, deficit,
+  self-consumption %, grid import/export.
+- **ConsumptionService** — residential/commercial/industrial synthetic load curves.
+
+## Data layer
+- **APIAgent** — provider rotation, failover and quota tracking (agent #6).
+- **Database** — SQLAlchemy async, SQLite locally / PostgreSQL+TimescaleDB in prod
+  via a portable GUID type. Repository layer persists sites, readings, forecasts,
+  settlements and training runs (PROJECT_PLAN section 8 ER model).
+- **site_resolver** — resolves a registered site from the DB, or builds an ad-hoc
+  config from query params so any location works without registration.

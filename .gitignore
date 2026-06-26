@@ -26,3 +26,8 @@ pgdata/
 # Misc
 *.log
 tectonic_bin/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3

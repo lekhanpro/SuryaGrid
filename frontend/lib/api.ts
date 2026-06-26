@@ -79,3 +79,39 @@ export async function getSummary(
   if (IS_STATIC) return mockSummary(params);
   return fetchJson<SummaryData>(`${BASE}/summary/${siteId}?${qs(params)}`);
 }
+
+import type { EnergyBalance, SettlementDay, RLRates, TrainingRun } from "./types";
+
+export async function getEnergy(
+  siteId: string,
+  params?: Record<string, string | number>
+): Promise<EnergyBalance> {
+  return fetchJson<EnergyBalance>(`${BASE}/energy/${siteId}?${qs(params)}`);
+}
+
+export async function settleDay(
+  siteId: string,
+  params?: Record<string, string | number | boolean>
+): Promise<SettlementDay> {
+  const sp = new URLSearchParams();
+  if (params) Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+  return fetchJson<SettlementDay>(`${BASE}/settle/day/${siteId}?${sp.toString()}`, { method: "POST" });
+}
+
+export async function getRLRates(): Promise<RLRates> {
+  return fetchJson<RLRates>(`${BASE}/rl/rates`);
+}
+
+export async function getRLRuns(): Promise<TrainingRun[]> {
+  return fetchJson<TrainingRun[]>(`${BASE}/rl/runs`);
+}
+
+export async function trainRL(params: Record<string, string | number | boolean>): Promise<any> {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+  return fetchJson<any>(`${BASE}/rl/train?${sp.toString()}`, { method: "POST" });
+}
+
+export async function getProfiles(): Promise<Record<string, any>> {
+  return fetchJson<Record<string, any>>(`${BASE}/consumption/profiles`);
+}

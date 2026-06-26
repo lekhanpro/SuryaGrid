@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://suryagrid:suryagrid@localhost:5432/suryagrid"
+    # Database — defaults to local SQLite (no server needed); set DATABASE_URL
+    # to a postgresql+asyncpg URL for production / TimescaleDB.
+    DATABASE_URL: str = "sqlite+aiosqlite:///./suryagrid.db"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

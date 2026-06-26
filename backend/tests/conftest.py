@@ -1,17 +1,29 @@
-"""Shared test fixtures, including a deterministic offline weather provider."""
+"""Shared test fixtures: isolated SQLite DB + deterministic offline provider."""
 
+import asyncio
+import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.providers.base import WeatherPoint, WeatherProvider
+# Use an isolated on-disk SQLite DB for tests (set before app imports).
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_suryagrid.db"
+
+from app.providers.base import WeatherPoint, WeatherProvider  # noqa: E402
+
+
+def _fixed(offset_seconds: int):
+    return timezone(timedelta(seconds=offset_seconds))
+
+
+def _bell(hour: float) -> float:
+    import math
+
+    return math.sin(math.pi * (hour - 6) / 12)
 
 
 class FakeProvider(WeatherProvider):
-    """Deterministic provider so tests never depend on the network.
-
-    Produces a simple clear-ish day: irradiance follows a daytime bell curve.
-    """
+    """Deterministic provider so tests never depend on the network."""
 
     name = "fake"
 
@@ -23,9 +35,7 @@ class FakeProvider(WeatherProvider):
             ts = base + timedelta(hours=h)
             if 6 <= h <= 18:
                 frac = max(0.0, _bell(h))
-                ghi = 950 * frac
-                dni = 800 * frac
-                dhi = 120 * frac
+                ghi, dni, dhi = 950 * frac, 800 * frac, 120 * frac
             else:
                 ghi = dni = dhi = 0.0
             points.append(
@@ -42,14 +52,25 @@ class FakeProvider(WeatherProvider):
         return points
 
 
-def _bell(hour: float) -> float:
-    import math
+def use_fake_provider():
+    """Inject the deterministic provider into all routes that fetch weather."""
+    from app.agents.api_agent import ProviderQuota
+    from app.api import routes_energy, routes_settlement, routes_timeline, routes_weather
 
-    return math.sin(math.pi * (hour - 6) / 12)
+    fake = FakeProvider()
+    routes_timeline._service.provider = fake
+    routes_energy._service.provider = fake
+    routes_settlement._service.provider = fake
+    routes_weather._api_agent._providers = [(fake, ProviderQuota("fake"))]
 
 
-def _fixed(offset_seconds: int):
-    return timezone(timedelta(seconds=offset_seconds))
+@pytest.fixture(scope="session", autouse=True)
+def _init_test_db():
+    """Create tables in the isolated test DB before any test runs."""
+    from app.db.database import init_db
+
+    asyncio.run(init_db())
+    yield
 
 
 @pytest.fixture

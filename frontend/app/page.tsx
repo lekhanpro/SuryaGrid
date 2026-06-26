@@ -3,7 +3,10 @@ import Link from "next/link";
 const features = [
   { title: "Solar Nowcasting", desc: "pvlib physics forecasts from real GHI/DNI/DHI irradiance, cloud cover, and temperature.", color: "from-amber-400 to-orange-500", icon: "M12 3v2m0 14v2m9-9h-2M5 12H3m14.5-6.5l-1.4 1.4M7.9 16.1l-1.4 1.4m12.6 0l-1.4-1.4M7.9 7.9L6.5 6.5M16 12a4 4 0 11-8 0 4 4 0 018 0z" },
   { title: "DSM Penalty Engine", desc: "Deviation Settlement analysis against scheduled MW with penalty cost estimates.", color: "from-blue-400 to-cyan-500", icon: "M9 7h6m-6 4h6m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" },
-  { title: "Risk Scoring", desc: "Deterministic LOW–CRITICAL risk levels from deviation band breach and forecast confidence.", color: "from-emerald-400 to-green-500", icon: "M3 13.5l3-3 4 4 8-8M21 7v6h-6" },
+  { title: "Energy Balance", desc: "Production vs consumption, surplus/deficit, self-consumption and grid flow.", color: "from-emerald-400 to-green-500", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+  { title: "Settlement Engine", desc: "Reward, penalty and discount settlement between owners and consumers.", color: "from-purple-400 to-fuchsia-500", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  { title: "RL Optimization", desc: "Reinforcement learning tunes rates, trained on real historical irradiance.", color: "from-pink-400 to-rose-500", icon: "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" },
+  { title: "Live Real Data", desc: "Open-Meteo irradiance, persisted in a real database, no API keys required.", color: "from-cyan-400 to-blue-500", icon: "M4 7v10c0 2 1.5 3 4 3h8c2.5 0 4-1 4-3V7M4 7c0 2 1.5 3 4 3h8c2.5 0 4-1 4-3M4 7c0-2 1.5-3 4-3h8c2.5 0 4 1 4 3" },
 ];
 
 export default function Home() {

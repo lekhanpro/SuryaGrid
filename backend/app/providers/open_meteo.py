@@ -17,6 +17,7 @@ from app.core.logging import logger
 from app.providers.base import WeatherPoint, WeatherProvider
 
 _ENDPOINT = "https://api.open-meteo.com/v1/forecast"
+_ARCHIVE_ENDPOINT = "https://archive-api.open-meteo.com/v1/archive"
 
 _HOURLY_FIELDS = [
     "temperature_2m",
@@ -65,6 +66,38 @@ class OpenMeteoProvider(WeatherProvider):
         except httpx.HTTPError as exc:
             logger.error(f"Open-Meteo request failed: {exc}")
             raise ProviderError(f"Open-Meteo request failed: {exc}") from exc
+
+        return self._parse(payload)
+
+    async def fetch_archive(
+        self,
+        latitude: float,
+        longitude: float,
+        timezone: str,
+        start_date: str,
+        end_date: str,
+    ) -> list[WeatherPoint]:
+        """Fetch real historical hourly weather from the Open-Meteo archive.
+
+        Used to train the RL policy on genuine past irradiance, not simulation.
+        Dates are ISO strings (YYYY-MM-DD).
+        """
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "hourly": ",".join(_HOURLY_FIELDS),
+            "timezone": timezone,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout * 2) as client:
+                resp = await client.get(_ARCHIVE_ENDPOINT, params=params)
+                resp.raise_for_status()
+                payload = resp.json()
+        except httpx.HTTPError as exc:
+            logger.error(f"Open-Meteo archive request failed: {exc}")
+            raise ProviderError(f"Open-Meteo archive request failed: {exc}") from exc
 
         return self._parse(payload)
 
