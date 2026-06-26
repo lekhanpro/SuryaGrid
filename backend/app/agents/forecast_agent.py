@@ -1,9 +1,11 @@
 """ForecastAgent - physics-based solar generation nowcasting using pvlib.
 
-Given real irradiance components (GHI/DNI/DHI) plus temperature and wind for a
-site, this computes plane-of-array irradiance, cell temperature and AC power with
-validated PV models. It also derives the day-ahead "committed" schedule from a
-clear-sky model, which is the realistic baseline a generator declares to the grid.
+Given irradiance components (GHI/DNI/DHI) plus temperature and wind for a site,
+this computes plane-of-array irradiance, cell temperature and AC power with
+validated PV models. When a data source supplies GHI only, the beam/diffuse
+components are derived via the Erbs decomposition. It also derives the day-ahead
+"committed" schedule from a clear-sky model, the realistic baseline a generator
+declares to the grid.
 
 All numbers are deterministic and reproducible; no LLM touches the math.
 """
@@ -63,6 +65,9 @@ class ForecastAgent:
 
         solpos = loc.get_solarposition(index)
 
+        # If the provider supplies GHI only (no beam/diffuse), derive them.
+        dni, dhi = self._resolve_components(index, ghi, dni, dhi, solpos)
+
         # Actual (cloud-affected) generation from real irradiance
         poa_actual = self._poa(site, solpos, ghi, dni, dhi)
         gen_actual = self._ac_power_mw(site, poa_actual, temp_air, wind)
@@ -112,6 +117,25 @@ class ForecastAgent:
             wind_speed_mps=wind_speed_mps,
         )
         return self.forecast_timeline(site, [point])[0]
+
+    def _resolve_components(self, index, ghi, dni, dhi, solpos):
+        """Resolve beam (DNI) and diffuse (DHI) irradiance.
+
+        Real providers (e.g. Open-Meteo) supply measured DNI/DHI, which we use
+        as-is. When a source returns GHI only (DNI and DHI both absent), derive
+        the components with pvlib's Erbs decomposition so the physics pipeline
+        still runs accurately instead of degrading to near-zero plane-of-array.
+        """
+        has_beam = float(dni.abs().sum()) > 0.0
+        has_diffuse = float(dhi.abs().sum()) > 0.0
+        ghi_present = float(ghi.abs().sum()) > 0.0
+        if not has_beam and not has_diffuse and ghi_present:
+            decomposed = irradiance.erbs(ghi.clip(lower=0.0), solpos["zenith"], index)
+            return (
+                decomposed["dni"].fillna(0.0).clip(lower=0.0),
+                decomposed["dhi"].fillna(0.0).clip(lower=0.0),
+            )
+        return dni, dhi
 
     def _poa(self, site: SiteConfig, solpos, ghi, dni, dhi):
         total = irradiance.get_total_irradiance(
