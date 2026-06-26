@@ -1,23 +1,36 @@
 "use client";
 import { useState } from "react";
-import { getTimeline, getSummary } from "@/lib/api";
+import { getTimeline } from "@/lib/api";
 import MiniTimeline from "@/components/charts/MiniTimeline";
 import MetricCard from "@/components/cards/MetricCard";
-import type { TimelineData, SummaryData, TimelineEntry } from "@/lib/types";
+import type { TimelineData, TimelineEntry } from "@/lib/types";
+
+const LOCATIONS = [
+  { label: "Bhadla, Rajasthan", lat: 27.53, lon: 71.91, cap: 100 },
+  { label: "Pavagada, Karnataka", lat: 14.1, lon: 77.28, cap: 100 },
+  { label: "Kurnool, Andhra Pradesh", lat: 15.68, lon: 78.28, cap: 50 },
+  { label: "New Delhi", lat: 28.61, lon: 77.21, cap: 50 },
+];
 
 export default function TimelinePage() {
-  const [timeline, setTimeline] = useState<TimelineData | null>(null);
-  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [data, setData] = useState<TimelineData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loc, setLoc] = useState(0);
 
   const load = async () => {
     setLoading(true);
     try {
-      const params = { seed: 42, capacity_mw: 50, scheduled_mw: 35 };
-      const [tl, sm] = await Promise.all([getTimeline("primary-site", params), getSummary("primary-site", params)]);
-      setTimeline(tl);
-      setSummary(sm);
-    } catch (e: any) { alert(e.message); }
+      const l = LOCATIONS[loc];
+      const tl = await getTimeline("primary-site", {
+        latitude: l.lat,
+        longitude: l.lon,
+        capacity_mw: l.cap,
+        forecast_days: 1,
+      });
+      setData(tl);
+    } catch (e: any) {
+      alert(e.message);
+    }
     setLoading(false);
   };
 
@@ -26,35 +39,48 @@ export default function TimelinePage() {
     return <span className={`badge ${cls[level] || "badge-green"}`}>{level}</span>;
   };
 
+  const summary = data?.summary;
+  const capacity = data?.capacity_mw ?? 50;
+
   return (
     <div className="max-w-7xl mx-auto animate-fade-up">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">Generation Timeline</h1>
-        <p className="text-white/40 mt-1">24-hour solar generation forecast with DSM deviation tracking</p>
+        <p className="text-white/40 mt-1">Hourly solar nowcast with DSM deviation tracking · live Open-Meteo data</p>
       </div>
 
-      <button onClick={load} disabled={loading} className="btn-primary mb-8">
-        {loading ? (
-          <span className="flex items-center gap-2">
-            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            Generating…
-          </span>
-        ) : "Generate 24h Forecast"}
-      </button>
+      <div className="flex flex-wrap items-end gap-3 mb-8">
+        <div>
+          <label className="text-[10px] text-white/40 block mb-1 uppercase tracking-wider">Site</label>
+          <select className="input-field" value={loc} onChange={(e) => setLoc(Number(e.target.value))}>
+            {LOCATIONS.map((l, i) => (
+              <option key={i} value={i} className="bg-slate-800">{l.label} · {l.cap} MW</option>
+            ))}
+          </select>
+        </div>
+        <button onClick={load} disabled={loading} className="btn-primary">
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              Fetching…
+            </span>
+          ) : "Generate Forecast"}
+        </button>
+      </div>
 
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <MetricCard title="Total Predicted" value={summary.total_predicted_mw.toFixed(1)} unit="MW" color="blue" subtitle="Cumulative day output" />
-          <MetricCard title="Total Scheduled" value={summary.total_scheduled_mw.toFixed(1)} unit="MW" color="purple" subtitle="Agreement total" />
-          <MetricCard title="Penalty Intervals" value={`${summary.penalty_intervals}/${summary.total_intervals}`} color="red" subtitle="Intervals above threshold" />
-          <MetricCard title="Max Deviation" value={summary.max_deviation_percent.toFixed(1)} unit="%" color="orange" subtitle="Peak deviation recorded" />
+          <MetricCard title="Predicted Energy" value={summary.predicted_energy_mwh.toFixed(1)} unit="MWh" color="blue" subtitle="Cloud-adjusted day output" />
+          <MetricCard title="Scheduled Energy" value={summary.scheduled_energy_mwh.toFixed(1)} unit="MWh" color="purple" subtitle="Clear-sky commitment" />
+          <MetricCard title="Penalty Intervals" value={`${summary.penalty_intervals}/${summary.daylight_intervals}`} color="orange" subtitle="Daylight hours over band" />
+          <MetricCard title="Est. DSM Charge" value={`₹${summary.total_penalty_cost.toLocaleString()}`} color="red" subtitle="Cumulative day" />
         </div>
       )}
 
-      {timeline && (
+      {data && (
         <>
           <div className="mb-6">
-            <MiniTimeline data={timeline.timeline} maxMW={50} />
+            <MiniTimeline data={data.timeline} maxMW={capacity} />
           </div>
 
           <div className="glass-card overflow-hidden p-0">
@@ -63,30 +89,32 @@ export default function TimelinePage() {
                 <thead className="table-head sticky top-0 backdrop-blur-md">
                   <tr>
                     <th className="px-3 py-2.5 text-left font-medium">Time</th>
-                    <th className="px-3 py-2.5 text-right font-medium">Irradiance</th>
+                    <th className="px-3 py-2.5 text-right font-medium">GHI</th>
                     <th className="px-3 py-2.5 text-right font-medium">Cloud</th>
                     <th className="px-3 py-2.5 text-right font-medium">Predicted</th>
                     <th className="px-3 py-2.5 text-right font-medium">Scheduled</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Energy</th>
                     <th className="px-3 py-2.5 text-right font-medium">Deviation</th>
                     <th className="px-3 py-2.5 text-center font-medium">Status</th>
                     <th className="px-3 py-2.5 text-center font-medium">Risk</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {timeline.timeline.map((e: TimelineEntry, i: number) => (
+                  {data.timeline.map((e: TimelineEntry, i: number) => (
                     <tr key={i} className="table-row">
-                      <td className="px-3 py-2 font-mono text-white/70">{e.timestamp.split("T")[1]?.slice(0, 5)}</td>
-                      <td className="px-3 py-2 text-right text-white/80">{e.irradiance_w_m2.toFixed(0)} <span className="text-white/30">W/m²</span></td>
+                      <td className="px-3 py-2 font-mono text-white/70">{e.timestamp.slice(11, 16)}</td>
+                      <td className="px-3 py-2 text-right text-white/80">{e.ghi_w_m2.toFixed(0)} <span className="text-white/30">W/m²</span></td>
                       <td className="px-3 py-2 text-right text-white/80">{e.cloud_cover_percent.toFixed(0)}%</td>
                       <td className="px-3 py-2 text-right font-medium text-white">{e.predicted_generation_mw.toFixed(2)} MW</td>
                       <td className="px-3 py-2 text-right text-white/50">{e.scheduled_generation_mw.toFixed(2)} MW</td>
+                      <td className="px-3 py-2 text-right text-white/70">{e.energy_mwh.toFixed(2)} MWh</td>
                       <td className="px-3 py-2 text-right font-mono text-white/70">{e.deviation_percent.toFixed(1)}%</td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`badge ${e.penalty_status === "PENALTY_RISK" ? "badge-red" : "badge-green"}`}>
-                          {e.penalty_status === "PENALTY_RISK" ? "PENALTY" : "OK"}
+                        <span className={`badge ${e.penalty_status === "PENALTY_RISK" ? "badge-red" : e.penalty_status === "INVALID_SCHEDULE" ? "badge-yellow" : "badge-green"}`}>
+                          {e.penalty_status === "PENALTY_RISK" ? "PENALTY" : e.penalty_status === "INVALID_SCHEDULE" ? "N/A" : "OK"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center">{riskBadge(e.fuzzy_risk_level)}</td>
+                      <td className="px-3 py-2 text-center">{riskBadge(e.risk_level)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -96,13 +124,13 @@ export default function TimelinePage() {
         </>
       )}
 
-      {!timeline && !loading && (
+      {!data && !loading && (
         <div className="glass-card text-center py-16">
           <svg className="w-16 h-16 mx-auto text-white/15 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
           <h3 className="text-lg font-medium text-white/60">No Timeline Data</h3>
-          <p className="text-white/30 mt-1 text-sm">Generate a 24-hour forecast to view the timeline</p>
+          <p className="text-white/30 mt-1 text-sm">Select a site and generate a live forecast</p>
         </div>
       )}
     </div>

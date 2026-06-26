@@ -56,7 +56,7 @@ export default function Sidebar() {
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50"></div>
           <span className="text-xs text-white/60 font-medium">System Active</span>
         </div>
-        <div className="text-[10px] text-white/30 mt-1 ml-4">Phase 1 &middot; Synthetic Mode</div>
+        <div className="text-[10px] text-white/30 mt-1 ml-4">Live &middot; Open-Meteo + pvlib</div>
       </div>
     </aside>
   );

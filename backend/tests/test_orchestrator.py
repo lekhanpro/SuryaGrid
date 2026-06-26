@@ -1,47 +1,48 @@
-"""Tests for OrchestratorAgent - full prediction cycle."""
-import sys
-sys.path.insert(0, ".")
+"""Tests for the OrchestratorAgent single-interval pipeline."""
+
+from datetime import datetime, timezone
+
+from app.agents.forecast_agent import ForecastAgent, SiteConfig
 from app.agents.orchestrator_agent import OrchestratorAgent
 
-agent = OrchestratorAgent()
+site = SiteConfig(latitude=28.6, longitude=77.2, timezone="Asia/Kolkata", capacity_mw=50.0)
+forecast = ForecastAgent()
+orch = OrchestratorAgent()
 
-REQUIRED_FIELDS = [
-    "predicted_generation_mw", "scheduled_generation_mw", "deviation_mw",
-    "deviation_percent", "allowed_dsm_threshold_percent", "penalty_status",
-    "estimated_penalty_cost", "fuzzy_risk_score", "fuzzy_risk_level",
-    "confidence_score", "explanation",
-]
+
+def _point(ghi, dni, dhi, cloud, temp=30.0):
+    return forecast.predict_point(
+        site=site, ghi_w_m2=ghi, dni_w_m2=dni, dhi_w_m2=dhi,
+        temperature_c=temp, cloud_cover_percent=cloud,
+        timestamp=datetime(2026, 6, 25, 6, 30, tzinfo=timezone.utc),
+    )
 
 
 def test_full_cycle_returns_all_fields():
-    r = agent.run_prediction_cycle(
-        solar_capacity_mw=50.0, irradiance_w_m2=750.0, cloud_cover_percent=40.0,
-        temperature_c=32.0, scheduled_generation_mw=35.0,
-    )
-    for field in REQUIRED_FIELDS:
-        assert field in r, f"Missing field: {field}"
+    point = _point(800, 700, 100, 20)
+    r = orch.evaluate(point, scheduled_generation_mw=30.0,
+                      allowed_dsm_threshold_percent=10.0, penalty_rate_per_mwh=12000.0)
+    for key in ["predicted_generation_mw", "energy_mwh", "deviation_percent",
+                "penalty_status", "risk_level", "confidence_score", "explanation"]:
+        assert key in r
 
 
-def test_penalty_scenario():
-    r = agent.run_prediction_cycle(
-        solar_capacity_mw=50.0, irradiance_w_m2=300.0, cloud_cover_percent=70.0,
-        temperature_c=35.0, scheduled_generation_mw=35.0,
-    )
-    assert r["penalty_status"] == "PENALTY_RISK"
-    assert r["estimated_penalty_cost"] > 0
+def test_clearsky_default_schedule():
+    point = _point(300, 100, 200, 85)  # cloudy -> below clear-sky baseline
+    r = orch.run_for_site(site, point, scheduled_generation_mw=None,
+                          allowed_dsm_threshold_percent=10.0, penalty_rate_per_mwh=12000.0)
+    assert r["scheduled_generation_mw"] == point.clearsky_generation_mw
 
 
-def test_no_penalty_scenario():
-    r = agent.run_prediction_cycle(
-        solar_capacity_mw=50.0, irradiance_w_m2=950.0, cloud_cover_percent=5.0,
-        temperature_c=25.0, scheduled_generation_mw=35.0,
-    )
-    # With 950 irradiance and low cloud, prediction should be near capacity
-    assert r["penalty_status"] == "NO_PENALTY" or r["predicted_generation_mw"] > 30
+def test_no_penalty_when_on_schedule():
+    point = _point(850, 750, 100, 10)
+    r = orch.evaluate(point, scheduled_generation_mw=point.predicted_generation_mw,
+                      allowed_dsm_threshold_percent=10.0, penalty_rate_per_mwh=12000.0)
+    assert r["penalty_status"] == "NO_PENALTY"
 
 
 if __name__ == "__main__":
     test_full_cycle_returns_all_fields()
-    test_penalty_scenario()
-    test_no_penalty_scenario()
+    test_clearsky_default_schedule()
+    test_no_penalty_when_on_schedule()
     print("All Orchestrator tests PASSED")

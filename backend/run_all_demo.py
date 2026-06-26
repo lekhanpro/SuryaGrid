@@ -1,112 +1,61 @@
-"""Run full system demonstration - all endpoints exercised."""
+"""Live demonstration of the real Suryagrid AI pipeline (calls Open-Meteo)."""
+
 import asyncio
 import json
 import sys
+
 sys.path.insert(0, ".")
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from app.main import app
 
 
 async def main():
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://localhost:8000") as c:
+    async with AsyncClient(transport=transport, base_url="http://localhost:8000", timeout=60) as c:
+        print("=" * 72)
+        print("  SURYAGRID AI - LIVE PIPELINE DEMONSTRATION (real Open-Meteo data)")
+        print("=" * 72)
 
-        print("=" * 70)
-        print("  SURYAGRID AI - PHASE 1 SYSTEM DEMONSTRATION")
-        print("=" * 70)
-
-        # 1. Health
         print("\n[1] GET /api/v1/health")
         r = await c.get("/api/v1/health")
-        print(f"    Status: {r.status_code}")
-        print(f"    Response: {json.dumps(r.json(), indent=6)}")
+        print(f"    {json.dumps(r.json()['data'])}")
 
-        # 2. Create Site
-        print("\n[2] POST /api/v1/sites")
+        print("\n[2] POST /api/v1/sites  (Bhadla Solar Park, Rajasthan)")
         r = await c.post("/api/v1/sites", json={
-            "name": "Rajasthan Solar Park",
-            "latitude": 26.9,
-            "longitude": 70.9,
-            "capacity_mw": 100.0,
-            "panel_efficiency": 0.19,
+            "name": "Bhadla Solar Park", "latitude": 27.53, "longitude": 71.91,
+            "capacity_mw": 100.0, "tilt": 27.0, "azimuth": 180.0,
+            "allowed_dsm_threshold_percent": 10.0, "penalty_rate_per_mwh": 12000.0,
         })
         site = r.json()["data"]
         site_id = site["id"]
-        print(f"    Created: {site['name']} (ID: {site_id})")
-        print(f"    Capacity: {site['capacity_mw']} MW")
+        print(f"    Created {site['name']} ({site['capacity_mw']} MW) -> {site_id}")
 
-        # 3. Generate Synthetic Data
-        print("\n[3] POST /api/v1/synthetic-data/generate")
-        r = await c.post(f"/api/v1/synthetic-data/generate?site_id={site_id}&seed=42&capacity_mw=100")
-        d = r.json()["data"]
-        print(f"    Generated: {d['readings_count']} weather readings")
-        print(f"    Date: {d['date']}")
-        print(f"    Sample (noon): {json.dumps(d['readings'][24], indent=6)}")
+        print("\n[3] GET /api/v1/weather/{site_id}  (real irradiance forecast)")
+        r = await c.get(f"/api/v1/weather/{site_id}")
+        w = r.json()["data"]
+        noon = w["readings"][12]
+        print(f"    Provider: {w['provider']}, {w['readings_count']} hourly readings")
+        print(f"    Noon: GHI {noon['ghi_w_m2']} W/m2, DNI {noon['dni_w_m2']}, cloud {noon['cloud_cover_percent']}%, {noon['temperature_c']} C")
 
-        # 4. Run Prediction
-        print("\n[4] POST /api/v1/predict")
-        r = await c.post("/api/v1/predict", json={
-            "site_id": site_id,
-            "solar_capacity_mw": 100.0,
-            "irradiance_w_m2": 750.0,
-            "cloud_cover_percent": 45.0,
-            "temperature_c": 34.0,
-            "scheduled_generation_mw": 65.0,
-            "allowed_dsm_threshold_percent": 10.0,
-            "penalty_rate_per_mw": 15000.0,
-        })
-        pred = r.json()["data"]
-        print(f"    Predicted Generation:  {pred['predicted_generation_mw']} MW")
-        print(f"    Scheduled Generation:  {pred['scheduled_generation_mw']} MW")
-        print(f"    Deviation:             {pred['deviation_mw']} MW ({pred['deviation_percent']}%)")
-        print(f"    Penalty Status:        {pred['penalty_status']}")
-        print(f"    Estimated Penalty:     INR {pred['estimated_penalty_cost']:,.0f}")
-        print(f"    Fuzzy Risk:            {pred['fuzzy_risk_level']} (score: {pred['fuzzy_risk_score']})")
-        print(f"    Confidence:            {pred['confidence_score']}")
-        print(f"    Explanation:           {pred['explanation']}")
+        print("\n[4] GET /api/v1/timeline/{site_id}  (nowcast + DSM per hour)")
+        r = await c.get(f"/api/v1/timeline/{site_id}")
+        data = r.json()["data"]
+        s = data["summary"]
+        print(f"    Predicted energy: {s['predicted_energy_mwh']} MWh | peak {s['peak_generation_mw']} MW")
+        print(f"    Penalty intervals: {s['penalty_intervals']}/{s['intervals']} | est. charge Rs {s['total_penalty_cost']:,.0f}")
+        print("    Daylight sample:")
+        for e in data["timeline"]:
+            if e["predicted_generation_mw"] > 0.5:
+                ts = e["timestamp"][11:16]
+                print(f"      {ts} | GHI {e['ghi_w_m2']:6.0f} | pred {e['predicted_generation_mw']:6.1f} MW "
+                      f"| sched {e['scheduled_generation_mw']:6.1f} | dev {e['deviation_percent']:5.1f}% "
+                      f"| {e['penalty_status']:12s} | {e['risk_level']}")
 
-        # 5. DSM Check
-        print("\n[5] POST /api/v1/dsm/check")
-        r = await c.post("/api/v1/dsm/check", json={
-            "predicted_generation_mw": 4.65,
-            "scheduled_generation_mw": 6.5,
-            "allowed_dsm_threshold_percent": 10.0,
-            "penalty_rate_per_mw": 15000.0,
-        })
-        dsm = r.json()["data"]
-        print(f"    Deviation: {dsm['deviation_mw']} MW ({dsm['deviation_percent']}%)")
-        print(f"    Status: {dsm['penalty_status']}")
-        print(f"    Penalty Cost: INR {dsm['estimated_penalty_cost']:,.0f}")
-
-        # 6. Timeline
-        print("\n[6] GET /api/v1/timeline/{site_id}")
-        r = await c.get(f"/api/v1/timeline/{site_id}?seed=42&capacity_mw=100&scheduled_mw=65")
-        tl = r.json()["data"]
-        print(f"    Entries: {len(tl['timeline'])}")
-        print(f"    Date: {tl['date']}")
-        print(f"    First 5 entries:")
-        for entry in tl["timeline"][:5]:
-            ts = entry["timestamp"].split("T")[1][:5]
-            print(f"      {ts} | Irr: {entry['irradiance_w_m2']:6.1f} | Pred: {entry['predicted_generation_mw']:6.2f} MW | Sched: {entry['scheduled_generation_mw']:5.1f} MW | {entry['penalty_status']:13s} | {entry['fuzzy_risk_level']}")
-        print(f"    ... + {len(tl['timeline']) - 5} more entries")
-
-        # 7. Summary
-        print("\n[7] GET /api/v1/summary/{site_id}")
-        r = await c.get(f"/api/v1/summary/{site_id}?seed=42&capacity_mw=100&scheduled_mw=65")
-        s = r.json()["data"]
-        print(f"    Total Predicted:    {s['total_predicted_mw']:.1f} MW")
-        print(f"    Total Scheduled:    {s['total_scheduled_mw']:.1f} MW")
-        print(f"    Penalty Intervals:  {s['penalty_intervals']} / {s['total_intervals']}")
-        print(f"    Max Deviation:      {s['max_deviation_percent']:.1f}%")
-
-        # 8. Swagger docs
-        print("\n[8] GET /docs (Swagger UI)")
-        r = await c.get("/docs")
-        print(f"    Status: {r.status_code} (Swagger UI accessible)")
-
-        print("\n" + "=" * 70)
-        print("  ALL SYSTEMS OPERATIONAL - PHASE 1 VALIDATED")
-        print("=" * 70)
+        print("\n" + "=" * 72)
+        print("  PIPELINE OPERATIONAL - REAL DATA, REAL PHYSICS")
+        print("=" * 72)
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
