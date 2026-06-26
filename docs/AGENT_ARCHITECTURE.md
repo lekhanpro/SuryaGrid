@@ -8,7 +8,8 @@
 ## Agents
 1. **ForecastAgent** — pvlib physics. Solar position → plane-of-array transposition
    → cell temperature (Faiman) → PVWatts DC → inverter AC. Outputs predicted MW,
-   clear-sky baseline MW, and a confidence score.
+   clear-sky baseline MW, and a confidence score. When a source supplies GHI only,
+   beam/diffuse components are derived via the Erbs decomposition.
 2. **DSMClassifierAgent** — deviation of nowcast vs scheduled MW against the allowed
    band; penalty status and chargeable cost on the deviated energy.
 3. **RiskAgent** — deterministic 0–100 score from band breach + confidence;
