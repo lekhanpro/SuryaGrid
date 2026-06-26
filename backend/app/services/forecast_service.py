@@ -66,9 +66,7 @@ class ForecastService:
             }
 
         predicted_energy = sum(e["energy_mwh"] for e in timeline)
-        scheduled_energy = sum(
-            e["scheduled_generation_mw"] * INTERVAL_HOURS for e in timeline
-        )
+        scheduled_energy = sum(e["scheduled_generation_mw"] * INTERVAL_HOURS for e in timeline)
         peak = max(e["predicted_generation_mw"] for e in timeline)
         penalty_intervals = sum(1 for e in timeline if e["penalty_status"] == "PENALTY_RISK")
         total_penalty = sum(e["estimated_penalty_cost"] for e in timeline)

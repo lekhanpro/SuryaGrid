@@ -26,9 +26,9 @@ class SiteConfig:
     timezone: str
     capacity_mw: float
     tilt: float = 20.0
-    azimuth: float = 180.0          # 180 = facing south (northern hemisphere)
+    azimuth: float = 180.0  # 180 = facing south (northern hemisphere)
     altitude: float = 0.0
-    gamma_pdc: float = -0.0035      # temperature coefficient (-0.35 %/degC)
+    gamma_pdc: float = -0.0035  # temperature coefficient (-0.35 %/degC)
     inverter_efficiency: float = 0.96
 
 
@@ -40,7 +40,7 @@ class ForecastPoint:
     cloud_cover_percent: float
     temperature_c: float
     predicted_generation_mw: float
-    clearsky_generation_mw: float   # day-ahead committed baseline
+    clearsky_generation_mw: float  # day-ahead committed baseline
     confidence_score: float
 
 
@@ -52,9 +52,7 @@ class ForecastAgent:
         if not weather:
             return []
 
-        loc = Location(
-            site.latitude, site.longitude, tz=site.timezone, altitude=site.altitude
-        )
+        loc = Location(site.latitude, site.longitude, tz=site.timezone, altitude=site.altitude)
         index = pd.DatetimeIndex([w.timestamp for w in weather])
 
         ghi = pd.Series([w.ghi_w_m2 for w in weather], index=index)
@@ -62,7 +60,6 @@ class ForecastAgent:
         dhi = pd.Series([w.dhi_w_m2 for w in weather], index=index)
         temp_air = pd.Series([w.temperature_c for w in weather], index=index)
         wind = pd.Series([w.wind_speed_mps for w in weather], index=index)
-        cloud = pd.Series([w.cloud_cover_percent for w in weather], index=index)
 
         solpos = loc.get_solarposition(index)
 
@@ -72,9 +69,7 @@ class ForecastAgent:
 
         # Day-ahead committed baseline from a clear-sky model
         clearsky = loc.get_clearsky(index, model="ineichen")
-        poa_clear = self._poa(
-            site, solpos, clearsky["ghi"], clearsky["dni"], clearsky["dhi"]
-        )
+        poa_clear = self._poa(site, solpos, clearsky["ghi"], clearsky["dni"], clearsky["dhi"])
         gen_clear = self._ac_power_mw(site, poa_clear, temp_air, wind)
 
         points: list[ForecastPoint] = []
@@ -134,9 +129,7 @@ class ForecastAgent:
         pdc0 = site.capacity_mw * 1_000_000.0  # W, treat capacity as nameplate
         cell_temp = temperature.faiman(poa_global, temp_air, wind)
         pdc = pvsystem.pvwatts_dc(poa_global, cell_temp, pdc0, site.gamma_pdc)
-        pac = inverter.pvwatts(
-            pdc, pdc0, eta_inv_nom=site.inverter_efficiency
-        )
+        pac = inverter.pvwatts(pdc, pdc0, eta_inv_nom=site.inverter_efficiency)
         mw = (pac / 1_000_000.0).fillna(0.0).clip(lower=0.0, upper=site.capacity_mw)
         return mw
 

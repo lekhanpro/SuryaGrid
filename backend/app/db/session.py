@@ -1,7 +1,9 @@
 """Database session dependency for FastAPI."""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.database import AsyncSessionLocal
 
 

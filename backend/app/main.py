@@ -1,19 +1,20 @@
 """Suryagrid AI Phase 1 - Solar Nowcasting & DSM Penalty Prediction System."""
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes_health import router as health_router
+from app.api.routes_predict import router as predict_router
+from app.api.routes_sites import router as sites_router
+from app.api.routes_timeline import router as timeline_router
+from app.api.routes_weather import router as weather_router
 from app.config import get_settings
 from app.core.exceptions import AppException, app_exception_handler, validation_exception_handler
 from app.core.logging import logger
-from app.core.rate_limit import init_redis, close_redis
-from app.api.routes_health import router as health_router
-from app.api.routes_weather import router as weather_router
-from app.api.routes_sites import router as sites_router
-from app.api.routes_predict import router as predict_router
-from app.api.routes_timeline import router as timeline_router
+from app.core.rate_limit import close_redis, init_redis
 
 
 @asynccontextmanager
