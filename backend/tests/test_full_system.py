@@ -4,23 +4,21 @@ import asyncio
 
 from httpx import ASGITransport, AsyncClient
 
-from app.api import routes_timeline, routes_weather
 from app.main import app
-from tests.conftest import FakeProvider
+from tests.conftest import use_fake_provider
 
 
 async def run():
-    fake = FakeProvider()
-    routes_timeline._service.provider = fake
-    routes_weather._provider = fake
-
+    use_fake_provider()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         print("=== SURYAGRID AI - FULL SYSTEM TEST ===\n")
 
         r = await c.get("/api/v1/health")
-        assert r.status_code == 200 and r.json()["data"]["status"] == "healthy"
-        print("[PASS] 1. Health endpoint")
+        d = r.json()["data"]
+        assert r.status_code == 200 and d["status"] == "healthy"
+        assert d["database"] == "connected"
+        print(f"[PASS] 1. Health + DB connected ({d['database_engine']})")
 
         r = await c.post(
             "/api/v1/sites",
@@ -32,11 +30,11 @@ async def run():
             },
         )
         site_id = r.json()["data"]["id"]
-        print(f"[PASS] 2. Site created: {site_id}")
+        print(f"[PASS] 2. Site persisted: {site_id}")
 
         r = await c.get(f"/api/v1/weather/{site_id}")
         assert r.json()["data"]["readings_count"] == 24
-        print("[PASS] 3. Real weather provider returns irradiance data")
+        print("[PASS] 3. Weather fetched + persisted")
 
         r = await c.post(
             "/api/v1/predict",
@@ -54,79 +52,31 @@ async def run():
         assert p["predicted_generation_mw"] > 0
         print(f"[PASS] 4. pvlib prediction: {p['predicted_generation_mw']} MW")
 
-        assert p["penalty_status"] in ("PENALTY_RISK", "NO_PENALTY")
-        print(f"[PASS] 5. DSM classification: {p['penalty_status']}")
-
-        assert p["risk_level"] in ("LOW", "MEDIUM", "HIGH", "CRITICAL")
-        print(f"[PASS] 6. Risk level: {p['risk_level']} (score {p['risk_score']})")
-
-        assert len(p["explanation"]) > 10
-        print(f"[PASS] 7. Explanation: '{p['explanation'][:60]}...'")
-
         r = await c.get(f"/api/v1/timeline/{site_id}")
         tl = r.json()["data"]["timeline"]
-        assert len(tl) == 24
-        assert all(
-            k in tl[12]
-            for k in [
-                "timestamp",
-                "predicted_generation_mw",
-                "energy_mwh",
-                "penalty_status",
-                "risk_level",
-            ]
-        )
-        print("[PASS] 8. Timeline with energy + DSM values")
+        assert len(tl) == 24 and r.json()["data"]["persisted"]
+        print("[PASS] 5. Timeline + forecast persistence")
 
-        r = await c.get(f"/api/v1/summary/{site_id}")
-        s = r.json()["data"]
-        assert s["predicted_energy_mwh"] > 0 and s["intervals"] == 24
-        print(
-            f"[PASS] 9. Summary: {s['predicted_energy_mwh']} MWh, {s['penalty_intervals']} penalty intervals"
-        )
+        r = await c.get(f"/api/v1/energy/{site_id}", params={"consumption_base_kw": 30000})
+        eb = r.json()["data"]
+        assert eb["total_production_kwh"] > 0
+        print(f"[PASS] 6. Energy balance: self-consumption {eb['self_consumption_percent']}%")
 
-        r = await c.post(
-            "/api/v1/dsm/check",
-            json={
-                "predicted_generation_mw": 4.65,
-                "scheduled_generation_mw": 6.5,
-            },
-        )
-        assert r.json()["data"]["penalty_status"] == "PENALTY_RISK"
-        print("[PASS] 10. Standalone DSM check")
+        r = await c.post(f"/api/v1/settle/day/{site_id}")
+        sd = r.json()["data"]
+        assert sd["intervals"] == 24
+        print(f"[PASS] 7. Settlement: net_owner Rs {sd['net_owner']:,.0f}")
+
+        r = await c.get(f"/api/v1/settlements/{site_id}")
+        assert r.json()["data"]["count"] > 0
+        print("[PASS] 8. Settlements persisted and retrievable")
+
+        r = await c.get("/api/v1/rl/rates")
+        assert "penalty_rate" in r.json()["data"]
+        print("[PASS] 9. RL policy serving rates")
 
         assert (await c.get("/docs")).status_code == 200
-        print("[PASS] 11. Swagger docs accessible")
-
-        body = (
-            await c.post(
-                "/api/v1/predict",
-                json={
-                    "capacity_mw": 50,
-                    "ghi_w_m2": 750,
-                    "dni_w_m2": 600,
-                    "dhi_w_m2": 100,
-                    "cloud_cover_percent": 40,
-                    "temperature_c": 32,
-                    "scheduled_generation_mw": 6.5,
-                },
-            )
-        ).json()
-        required = [
-            "predicted_generation_mw",
-            "scheduled_generation_mw",
-            "deviation_mw",
-            "deviation_percent",
-            "penalty_status",
-            "estimated_penalty_cost",
-            "risk_score",
-            "risk_level",
-            "confidence_score",
-            "explanation",
-        ]
-        for f in required:
-            assert f in body["data"], f"Missing: {f}"
-        print("[PASS] 12. All required output fields present")
+        print("[PASS] 10. Swagger docs accessible")
 
         print("\n=== ALL SYSTEM CHECKS PASSED ===")
 

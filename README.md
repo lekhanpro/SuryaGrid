@@ -91,14 +91,21 @@ docker-compose up --build
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/v1/health` | Health check |
-| POST | `/api/v1/sites` | Register a solar site |
+| GET | `/api/v1/health` | Health check (DB engine + record counts) |
+| POST | `/api/v1/sites` | Register a solar site (persisted) |
 | GET | `/api/v1/sites` / `/sites/{id}` | List / get sites |
-| GET | `/api/v1/weather/{site_id}` | Real hourly irradiance/weather |
+| GET | `/api/v1/weather/{site_id}` | Real hourly irradiance/weather (persisted) |
 | POST | `/api/v1/predict` | Single-interval DSM evaluation from explicit irradiance |
 | POST | `/api/v1/dsm/check` | Standalone DSM classification |
 | GET | `/api/v1/timeline/{site_id}` | Hourly nowcast + DSM timeline + summary |
 | GET | `/api/v1/summary/{site_id}` | Day summary |
+| GET | `/api/v1/energy/{site_id}` | Production vs consumption balance |
+| GET | `/api/v1/consumption/profiles` | Residential/commercial/industrial load curves |
+| POST | `/api/v1/settle` / `/settle/day/{id}` | Reward/penalty/discount settlement (persisted) |
+| GET | `/api/v1/settlements/{site_id}` | Stored settlement history |
+| GET | `/api/v1/rl/rates` | Current RL-optimized rates |
+| POST | `/api/v1/rl/train` | Train the RL policy on real historical data |
+| GET | `/api/v1/rl/runs` | Training run history |
 
 `timeline`/`summary`/`weather` accept query params (`latitude`, `longitude`,
 `capacity_mw`, `tilt`, `azimuth`, `scheduled_mw`, `threshold_percent`,
@@ -133,15 +140,31 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for details.
 ## Tech stack
 
 - **Backend**: Python 3.11+, FastAPI, Pydantic, pvlib, pandas/numpy, httpx
-- **Data**: Open-Meteo (real, free, key-less)
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Optional**: PostgreSQL + Redis (degrade gracefully if absent)
+- **Data**: Open-Meteo forecast + archive (real, free, key-less)
+- **Database**: SQLite (local) / PostgreSQL + TimescaleDB (production), SQLAlchemy async
+- **RL**: Gymnasium digital twin + numpy REINFORCE policy gradient
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS, Recharts
 - **Deploy**: Docker Compose
+
+## Database
+
+Persistence is on by default. The app uses **SQLite** locally (no server needed,
+file `suryagrid.db`) and **PostgreSQL/TimescaleDB** in production — just set
+`DATABASE_URL`. Tables are created automatically on startup (`init_db`); Alembic
+migrations are provided for managed Postgres deployments. Sites, weather readings,
+forecasts, settlements and RL training runs are all persisted.
+
+## Reinforcement Learning (trained on real data)
+
+The reward policy is trained on **real historical irradiance** from the Open-Meteo
+archive: each past day is run through the pvlib physics engine to build
+production/target curves, then a REINFORCE policy gradient optimizes the
+penalty/bonus/discount rates on that real-data digital twin. Trigger training via
+`POST /rl/train` (defaults to real data) or the RL Lab page in the dashboard.
 
 ## Notes & next steps
 
-- Site registry is in-memory; SQLAlchemy models exist in `app/db` for PostgreSQL
-  persistence in a clustered deployment.
 - JWT auth and per-route rate limiting are scaffolded but not enforced yet.
-- An RL policy for adaptive penalty/discount rates (see `PROJECT_PLAN.md`) is the
-  planned next phase; the deterministic forecast + DSM core it depends on is done.
+- The RL policy uses a numpy REINFORCE implementation (no heavy GPU deps); swap in
+  Stable-Baselines3 PPO on a GPU host for larger-scale training when needed.
+- Plant/SCADA connectors and multi-tenant auth are the next phases per `PROJECT_PLAN.md`.

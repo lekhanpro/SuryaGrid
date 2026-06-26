@@ -1,13 +1,15 @@
-"""Weather API - raw real irradiance/weather data from the provider (Open-Meteo)."""
+"""Weather API - raw real irradiance/weather data, persisted when site exists."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.providers.open_meteo import OpenMeteoProvider
-from app.services.site_store import site_store
+from app.agents.api_agent import APIAgent
+from app.db import repository
+from app.db.session import get_db
 from app.utils.response import success_response
 
 router = APIRouter()
-_provider = OpenMeteoProvider()
+_api_agent = APIAgent()
 
 
 @router.get("/weather/{site_id}")
@@ -18,17 +20,16 @@ async def get_weather(
     timezone: str = Query(default="Asia/Kolkata"),
     forecast_days: int = Query(default=1, ge=1, le=7),
     past_days: int = Query(default=0, ge=0, le=7),
+    db: AsyncSession = Depends(get_db),
 ):
-    try:
-        site = site_store.get(site_id)
-        latitude, longitude, timezone = site["latitude"], site["longitude"], site["timezone"]
-    except Exception:
-        pass
+    site = await repository.get_site(db, site_id)
+    if site is not None:
+        latitude, longitude, timezone = site.latitude, site.longitude, site.timezone
 
-    points = await _provider.fetch_forecast(
+    points, provider = await _api_agent.fetch_weather(
         latitude=latitude,
         longitude=longitude,
-        timezone=timezone,
+        timezone_str=timezone,
         forecast_days=forecast_days,
         past_days=past_days,
     )
@@ -44,14 +45,38 @@ async def get_weather(
         }
         for p in points
     ]
+
+    persisted = False
+    if site is not None:
+        rows = [
+            {
+                "ts": p.timestamp,
+                "ghi": p.ghi_w_m2,
+                "dni": p.dni_w_m2,
+                "dhi": p.dhi_w_m2,
+                "temp": p.temperature_c,
+                "cloud_cover": p.cloud_cover_percent,
+                "wind": p.wind_speed_mps,
+            }
+            for p in points
+        ]
+        await repository.save_readings(db, site.id, rows, source=provider)
+        persisted = True
+
     return success_response(
         data={
             "site_id": site_id,
-            "provider": _provider.name,
+            "provider": provider,
             "latitude": latitude,
             "longitude": longitude,
             "timezone": timezone,
             "readings_count": len(readings),
+            "persisted": persisted,
             "readings": readings,
         }
     )
+
+
+@router.get("/providers/status")
+async def provider_status():
+    return success_response(data={"providers": _api_agent.get_status()})
