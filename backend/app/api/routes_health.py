@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 from app.config import get_settings
-from app.core.rate_limit import redis_client
+from app.core import rate_limit
 from app.db.database import engine
 from app.utils.response import success_response
 from sqlalchemy import text
@@ -26,8 +26,8 @@ async def health_check():
     # Check Redis
     redis_status = "disconnected"
     try:
-        if redis_client:
-            await redis_client.ping()
+        if rate_limit.redis_client:
+            await rate_limit.redis_client.ping()
             redis_status = "connected"
     except Exception:
         pass

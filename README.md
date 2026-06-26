@@ -79,6 +79,8 @@ npm run dev
 
 Dashboard: http://localhost:3000
 
+> Note: the dashboard is served at the root path `/` in all environments.
+
 ### Docker Compose (full stack)
 
 ```bash
