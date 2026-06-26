@@ -20,13 +20,12 @@ EXPECTED_ROUTES = {
 
 
 def _registered_routes() -> set[tuple[str, str]]:
+    """Read routes from the OpenAPI schema — stable across FastAPI versions."""
     routes = set()
-    for route in app.routes:
-        methods = getattr(route, "methods", None)
-        path = getattr(route, "path", None)
-        if methods and path:
-            for m in methods:
-                routes.add((m, path))
+    paths = app.openapi().get("paths", {})
+    for path, methods in paths.items():
+        for method in methods:
+            routes.add((method.upper(), path))
     return routes
 
 
