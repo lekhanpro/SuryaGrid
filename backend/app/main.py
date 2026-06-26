@@ -6,8 +6,10 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes_energy import router as energy_router
 from app.api.routes_health import router as health_router
 from app.api.routes_predict import router as predict_router
+from app.api.routes_settlement import router as settlement_router
 from app.api.routes_sites import router as sites_router
 from app.api.routes_timeline import router as timeline_router
 from app.api.routes_weather import router as weather_router
@@ -57,6 +59,8 @@ def create_app() -> FastAPI:
     app.include_router(weather_router, prefix="/api/v1", tags=["weather"])
     app.include_router(predict_router, prefix="/api/v1", tags=["prediction"])
     app.include_router(timeline_router, prefix="/api/v1", tags=["timeline"])
+    app.include_router(energy_router, prefix="/api/v1", tags=["energy"])
+    app.include_router(settlement_router, prefix="/api/v1", tags=["settlement"])
 
     return app
 
