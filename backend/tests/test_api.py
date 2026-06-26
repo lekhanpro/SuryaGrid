@@ -25,9 +25,15 @@ async def run_tests():
         assert r.json()["data"]["status"] == "healthy"
 
         # Create site
-        r = await c.post("/api/v1/sites", json={
-            "name": "Hyderabad Solar", "latitude": 17.38, "longitude": 78.48, "capacity_mw": 50.0,
-        })
+        r = await c.post(
+            "/api/v1/sites",
+            json={
+                "name": "Hyderabad Solar",
+                "latitude": 17.38,
+                "longitude": 78.48,
+                "capacity_mw": 50.0,
+            },
+        )
         assert r.status_code == 200
         site_id = r.json()["data"]["id"]
 
@@ -43,24 +49,40 @@ async def run_tests():
         assert "ghi_w_m2" in w["readings"][12]
 
         # Predict (single interval)
-        r = await c.post("/api/v1/predict", json={
-            "capacity_mw": 50.0, "ghi_w_m2": 800.0, "dni_w_m2": 700.0, "dhi_w_m2": 100.0,
-            "cloud_cover_percent": 30.0, "temperature_c": 32.0, "scheduled_generation_mw": 35.0,
-        })
+        r = await c.post(
+            "/api/v1/predict",
+            json={
+                "capacity_mw": 50.0,
+                "ghi_w_m2": 800.0,
+                "dni_w_m2": 700.0,
+                "dhi_w_m2": 100.0,
+                "cloud_cover_percent": 30.0,
+                "temperature_c": 32.0,
+                "scheduled_generation_mw": 35.0,
+            },
+        )
         assert r.status_code == 200
         pred = r.json()["data"]
         assert "predicted_generation_mw" in pred and "explanation" in pred
 
         # DSM check - penalty
-        r = await c.post("/api/v1/dsm/check", json={
-            "predicted_generation_mw": 4.65, "scheduled_generation_mw": 6.5,
-        })
+        r = await c.post(
+            "/api/v1/dsm/check",
+            json={
+                "predicted_generation_mw": 4.65,
+                "scheduled_generation_mw": 6.5,
+            },
+        )
         assert r.json()["data"]["penalty_status"] == "PENALTY_RISK"
 
         # DSM check - invalid
-        r = await c.post("/api/v1/dsm/check", json={
-            "predicted_generation_mw": 10.0, "scheduled_generation_mw": 0.0,
-        })
+        r = await c.post(
+            "/api/v1/dsm/check",
+            json={
+                "predicted_generation_mw": 10.0,
+                "scheduled_generation_mw": 0.0,
+            },
+        )
         assert r.json()["data"]["penalty_status"] == "INVALID_SCHEDULE"
 
         # Timeline

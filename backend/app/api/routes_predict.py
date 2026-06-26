@@ -1,6 +1,6 @@
 """Prediction API - single-interval DSM evaluation from explicit inputs."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 
@@ -34,7 +34,7 @@ async def predict(req: PredictRequest):
         temperature_c=req.temperature_c,
         cloud_cover_percent=req.cloud_cover_percent,
         wind_speed_mps=req.wind_speed_mps,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
     result = _orchestrator.evaluate(
         forecast_point=point,

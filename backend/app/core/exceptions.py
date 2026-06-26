@@ -1,13 +1,16 @@
 """Standard application exceptions."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import Request
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 
 class AppException(Exception):
-    def __init__(self, status_code: int = 400, detail: str = "Bad request", error_code: str = "BAD_REQUEST"):
+    def __init__(
+        self, status_code: int = 400, detail: str = "Bad request", error_code: str = "BAD_REQUEST"
+    ):
         self.status_code = status_code
         self.detail = detail
         self.error_code = error_code
@@ -41,12 +44,14 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             "error_code": exc.error_code,
             "message": exc.detail,
             "details": None,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     return JSONResponse(
         status_code=422,
         content={
@@ -54,6 +59,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error_code": "VALIDATION_ERROR",
             "message": "Request validation failed",
             "details": exc.errors(),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )

@@ -1,7 +1,7 @@
 """Standard API response format for Suryagrid AI."""
 
+from datetime import UTC, datetime
 from typing import Any
-from datetime import datetime, timezone
 
 
 def success_response(data: Any = None, message: str = "OK") -> dict:
@@ -9,7 +9,7 @@ def success_response(data: Any = None, message: str = "OK") -> dict:
         "success": True,
         "message": message,
         "data": data,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -19,5 +19,5 @@ def error_response(error_code: str, message: str, details: Any = None) -> dict:
         "error_code": error_code,
         "message": message,
         "details": details,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }

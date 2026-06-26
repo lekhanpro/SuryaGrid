@@ -1,11 +1,12 @@
 """Health check endpoint."""
 
 from fastapi import APIRouter
+from sqlalchemy import text
+
 from app.config import get_settings
 from app.core import rate_limit
 from app.db.database import engine
 from app.utils.response import success_response
-from sqlalchemy import text
 
 router = APIRouter()
 
@@ -32,10 +33,12 @@ async def health_check():
     except Exception:
         pass
 
-    return success_response(data={
-        "status": "healthy",
-        "version": settings.APP_VERSION,
-        "environment": settings.ENVIRONMENT,
-        "database": db_status,
-        "redis": redis_status,
-    })
+    return success_response(
+        data={
+            "status": "healthy",
+            "version": settings.APP_VERSION,
+            "environment": settings.ENVIRONMENT,
+            "database": db_status,
+            "redis": redis_status,
+        }
+    )

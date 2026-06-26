@@ -12,8 +12,8 @@ from datetime import datetime
 
 import httpx
 
-from app.core.logging import logger
 from app.core.exceptions import AppException
+from app.core.logging import logger
 from app.providers.base import WeatherPoint, WeatherProvider
 
 _ENDPOINT = "https://api.open-meteo.com/v1/forecast"
@@ -21,9 +21,9 @@ _ENDPOINT = "https://api.open-meteo.com/v1/forecast"
 _HOURLY_FIELDS = [
     "temperature_2m",
     "cloud_cover",
-    "shortwave_radiation",        # GHI
-    "direct_normal_irradiance",   # DNI
-    "diffuse_radiation",          # DHI
+    "shortwave_radiation",  # GHI
+    "direct_normal_irradiance",  # DNI
+    "diffuse_radiation",  # DHI
     "wind_speed_10m",
 ]
 

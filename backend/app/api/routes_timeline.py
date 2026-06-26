@@ -62,7 +62,9 @@ async def get_timeline(
     result = await _service.build_timeline(
         site=config,
         scheduled_generation_mw=scheduled_mw,
-        allowed_dsm_threshold_percent=threshold_percent if threshold_percent is not None else site_threshold,
+        allowed_dsm_threshold_percent=threshold_percent
+        if threshold_percent is not None
+        else site_threshold,
         penalty_rate_per_mwh=penalty_rate if penalty_rate is not None else site_penalty,
         forecast_days=forecast_days,
         past_days=past_days,
@@ -98,7 +100,9 @@ async def get_summary(
     result = await _service.build_timeline(
         site=config,
         scheduled_generation_mw=scheduled_mw,
-        allowed_dsm_threshold_percent=threshold_percent if threshold_percent is not None else site_threshold,
+        allowed_dsm_threshold_percent=threshold_percent
+        if threshold_percent is not None
+        else site_threshold,
         penalty_rate_per_mwh=penalty_rate if penalty_rate is not None else site_penalty,
         forecast_days=forecast_days,
     )

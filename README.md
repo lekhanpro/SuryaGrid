@@ -111,6 +111,25 @@ python -m pytest tests/ -q
 ```
 Tests use a deterministic offline provider, so they never depend on the network.
 
+Lint/format (matches CI):
+```bash
+cd backend
+ruff check app tests
+ruff format --check app tests
+```
+
+## CI/CD
+
+- **CI** (`.github/workflows/ci.yml`) runs on every push and PR to `main`: ruff
+  lint/format, backend pytest, and the Next.js build (with artifact validation).
+  Dependencies are cached.
+- **CD** (`.github/workflows/deploy.yml`) publishes the frontend to GitHub Pages
+  **only after CI succeeds** (or via manual dispatch). It validates the Pages
+  prerequisite, detects the base path from the actual Pages config (no hosting
+  assumptions), validates the build artifact, and verifies the live URL returns 200.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for details.
+
 ## Tech stack
 
 - **Backend**: Python 3.11+, FastAPI, Pydantic, pvlib, pandas/numpy, httpx

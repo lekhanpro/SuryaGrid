@@ -28,7 +28,9 @@ class ExplanationAgent:
                 "breaching the allowed deviation band."
             )
             if estimated_penalty_cost > 0:
-                parts.append(f"Estimated DSM charge for this interval: \u20b9{estimated_penalty_cost:,.0f}.")
+                parts.append(
+                    f"Estimated DSM charge for this interval: \u20b9{estimated_penalty_cost:,.0f}."
+                )
         else:
             parts.append(
                 f"Within band: forecast {predicted_generation_mw:.2f} MW tracks the scheduled "

@@ -19,13 +19,13 @@ class WeatherPoint:
     Irradiance components are in W/m^2, the inputs pvlib needs for transposition.
     """
 
-    timestamp: datetime          # timezone-aware, in the site's local timezone
-    ghi_w_m2: float              # global horizontal irradiance
-    dni_w_m2: float              # direct normal irradiance
-    dhi_w_m2: float              # diffuse horizontal irradiance
-    temperature_c: float         # air temperature at 2m
-    cloud_cover_percent: float   # total cloud cover
-    wind_speed_mps: float        # wind speed at 10m
+    timestamp: datetime  # timezone-aware, in the site's local timezone
+    ghi_w_m2: float  # global horizontal irradiance
+    dni_w_m2: float  # direct normal irradiance
+    dhi_w_m2: float  # diffuse horizontal irradiance
+    temperature_c: float  # air temperature at 2m
+    cloud_cover_percent: float  # total cloud cover
+    wind_speed_mps: float  # wind speed at 10m
 
 
 class WeatherProvider(ABC):
