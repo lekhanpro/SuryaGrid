@@ -11,6 +11,7 @@ export default function RLPage() {
   const [loc, setLoc] = useState(0);
   const [episodes, setEpisodes] = useState(200);
   const [daysBack, setDaysBack] = useState(90);
+  const [years, setYears] = useState(0);
   const [useReal, setUseReal] = useState(true);
   const [lastRun, setLastRun] = useState<any>(null);
 
@@ -28,6 +29,7 @@ export default function RLPage() {
         longitude: l.longitude,
         capacity_mw: l.capacity_mw,
         days_back: daysBack,
+        years,
       });
       setLastRun(res);
       await refresh();
@@ -47,7 +49,7 @@ export default function RLPage() {
       </div>
 
       <div className="glass-card p-6 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
           <div>
             <label className="eyebrow block mb-1">Site</label>
             <select className="input-field" value={loc} onChange={(e) => setLoc(Number(e.target.value))}>
@@ -61,7 +63,11 @@ export default function RLPage() {
             <input type="number" className="input-field" value={episodes} onChange={(e) => setEpisodes(Number(e.target.value) || 100)} />
           </div>
           <div>
-            <label className="eyebrow block mb-1">History (days)</label>
+            <label className="eyebrow block mb-1">Years (ERA5)</label>
+            <input type="number" className="input-field" value={years} onChange={(e) => setYears(Number(e.target.value) || 0)} />
+          </div>
+          <div>
+            <label className="eyebrow block mb-1">Days (if 0 yrs)</label>
             <input type="number" className="input-field" value={daysBack} onChange={(e) => setDaysBack(Number(e.target.value) || 30)} />
           </div>
           <label className="flex items-center gap-2 text-sm text-white/60 pb-2">
@@ -78,7 +84,9 @@ export default function RLPage() {
           </button>
         </div>
         <p className="text-[11px] text-white/30 mt-3">
-          Real-data training fetches genuine past weather, runs pvlib physics to build production/target curves, then optimizes penalty/bonus/discount rates with a REINFORCE policy gradient.
+          Real-data training fetches genuine past weather (set Years ≥ 1 for multi-year ERA5 history),
+          runs pvlib physics to build production/target curves, then optimizes penalty/bonus/discount
+          rates with a REINFORCE policy gradient.
         </p>
       </div>
 

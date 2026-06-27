@@ -8,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_energy import router as energy_router
 from app.api.routes_health import router as health_router
+from app.api.routes_karnataka import router as karnataka_router
 from app.api.routes_predict import router as predict_router
+from app.api.routes_realtime import router as realtime_router
 from app.api.routes_settlement import router as settlement_router
 from app.api.routes_sites import router as sites_router
 from app.api.routes_timeline import router as timeline_router
@@ -17,6 +19,7 @@ from app.config import get_settings
 from app.core.exceptions import AppException, app_exception_handler, validation_exception_handler
 from app.core.logging import logger
 from app.core.rate_limit import close_redis, init_redis
+from app.core.scheduler import start_scheduler, stop_scheduler
 from app.db.database import dispose_db, init_db
 
 
@@ -28,7 +31,9 @@ async def lifespan(app: FastAPI):
     logger.info("Database initialized")
     await init_redis()
     logger.info("Redis initialized")
+    start_scheduler()
     yield
+    stop_scheduler()
     await close_redis()
     await dispose_db()
     logger.info("Shutdown complete")
@@ -65,6 +70,8 @@ def create_app() -> FastAPI:
     app.include_router(timeline_router, prefix="/api/v1", tags=["timeline"])
     app.include_router(energy_router, prefix="/api/v1", tags=["energy"])
     app.include_router(settlement_router, prefix="/api/v1", tags=["settlement"])
+    app.include_router(realtime_router, prefix="/api/v1", tags=["realtime"])
+    app.include_router(karnataka_router, prefix="/api/v1", tags=["karnataka"])
 
     return app
 

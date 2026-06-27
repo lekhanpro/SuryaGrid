@@ -24,12 +24,17 @@ async def build_real_dataset(
     timezone: str,
     capacity_mw: float,
     days_back: int = 120,
+    years: int = 0,
     consumption_profile: str = "commercial",
+    max_days: int = 1500,
 ) -> list[dict]:
     """Return a list of real days, each with per-hour arrays (kW).
 
     Each entry: {"date", "production_kw"[24], "target_kw"[24],
                  "consumption_kw"[24], "cloud"[24]}.
+
+    If ``years`` > 0, fetches that many full years of ERA5 history (chunked by
+    year to keep each request small); otherwise uses the trailing ``days_back``.
     """
     provider = OpenMeteoProvider()
     agent = ForecastAgent()
@@ -37,17 +42,30 @@ async def build_real_dataset(
         latitude=latitude, longitude=longitude, timezone=timezone, capacity_mw=capacity_mw
     )
 
-    # Archive has a ~5-day delay; pull a window ending a week ago.
+    # ERA5 archive has a ~5-7 day delay; end a week ago.
     end = date.today() - timedelta(days=7)
-    start = end - timedelta(days=days_back)
 
-    points = await provider.fetch_archive(
-        latitude=latitude,
-        longitude=longitude,
-        timezone=timezone,
-        start_date=start.isoformat(),
-        end_date=end.isoformat(),
-    )
+    # Build the list of (start, end) windows to fetch.
+    windows: list[tuple[date, date]] = []
+    if years and years > 0:
+        cursor_end = end
+        for _ in range(years):
+            cursor_start = cursor_end - timedelta(days=365)
+            windows.append((cursor_start, cursor_end))
+            cursor_end = cursor_start - timedelta(days=1)
+    else:
+        windows.append((end - timedelta(days=days_back), end))
+
+    points = []
+    for start, win_end in windows:
+        chunk = await provider.fetch_archive(
+            latitude=latitude,
+            longitude=longitude,
+            timezone=timezone,
+            start_date=start.isoformat(),
+            end_date=win_end.isoformat(),
+        )
+        points.extend(chunk)
 
     # Group hourly points by local date.
     by_day: dict[date, list] = defaultdict(list)
@@ -61,7 +79,7 @@ async def build_real_dataset(
     consumption_arr = [c["consumption_kw"] for c in consumption_day]
 
     dataset: list[dict] = []
-    for day, day_points in by_day.items():
+    for day, day_points in sorted(by_day.items()):
         if len(day_points) < 24:
             continue
         day_points = sorted(day_points, key=lambda x: x.timestamp)[:24]
@@ -69,7 +87,6 @@ async def build_real_dataset(
         production = [fp.predicted_generation_mw * 1000 for fp in forecast]  # kW
         target = [fp.clearsky_generation_mw * 1000 for fp in forecast]  # kW
         cloud = [fp.cloud_cover_percent for fp in forecast]
-        # Skip empty/no-sun days defensively.
         if max(production) <= 0:
             continue
         dataset.append(
@@ -81,5 +98,7 @@ async def build_real_dataset(
                 "cloud": np.array(cloud, dtype=np.float32),
             }
         )
+        if len(dataset) >= max_days:
+            break
 
     return dataset

@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     # Rate limiting
     RATE_LIMIT_PER_MINUTE: int = 60
 
+    # Real-time ingestion scheduler (off by default; opt-in for live polling)
+    SCHEDULER_ENABLED: bool = False
+    INGEST_INTERVAL_MINUTES: int = 15
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

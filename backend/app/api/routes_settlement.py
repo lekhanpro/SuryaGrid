@@ -199,9 +199,13 @@ async def train_rl(
     timezone_str: str = Query(default="Asia/Kolkata", alias="timezone"),
     capacity_mw: float = Query(default=50.0, gt=0),
     days_back: int = Query(default=90, ge=14, le=365),
+    years: int = Query(default=0, ge=0, le=10),
     db: AsyncSession = Depends(get_db),
 ):
-    """Train the RL policy. Defaults to REAL historical data (Open-Meteo archive)."""
+    """Train the RL policy. Defaults to REAL historical data (Open-Meteo archive).
+
+    Set ``years`` >= 1 to train on multiple years of ERA5 history.
+    """
     global _policy
     from app.rl.train import train, train_real
 
@@ -216,13 +220,15 @@ async def train_rl(
             timezone=timezone_str,
             capacity_mw=capacity_mw,
             days_back=days_back,
+            years=years,
         )
         dataset_days = len(dataset)
         if dataset_days >= 10:
             metrics = train_real(
                 dataset=dataset, capacity_kw=capacity_mw * 1000, episodes=episodes, verbose=False
             )
-            data_source = f"open-meteo-archive ({dataset_days} real days)"
+            span = f"{years}y" if years else f"{days_back}d"
+            data_source = f"open-meteo-archive ({dataset_days} real days / {span})"
         else:
             policy = train(episodes=episodes, verbose=False)
             metrics = {"policy": policy, "best_reward": 0.0, "mean_reward": 0.0}
