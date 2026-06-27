@@ -12,6 +12,9 @@ numpy>=2.1.0
 # Reinforcement Learning (digital twin)
 gymnasium>=1.0.0
 
+# Scheduling (opt-in real-time ingestion)
+apscheduler>=3.10.0
+
 # HTTP client (weather provider + tests)
 httpx>=0.27.0
 

@@ -115,3 +115,33 @@ export async function trainRL(params: Record<string, string | number | boolean>)
 export async function getProfiles(): Promise<Record<string, any>> {
   return fetchJson<Record<string, any>>(`${BASE}/consumption/profiles`);
 }
+
+import type { KarnatakaRegions, BescomStatus, CurrentWeather } from "./types";
+
+export async function seedKarnataka(): Promise<any> {
+  return fetchJson<any>(`${BASE}/karnataka/seed`, { method: "POST" });
+}
+
+export async function getKarnatakaRegions(): Promise<KarnatakaRegions> {
+  return fetchJson<KarnatakaRegions>(`${BASE}/karnataka/regions`);
+}
+
+export async function getBescomStatus(): Promise<BescomStatus> {
+  return fetchJson<BescomStatus>(`${BASE}/bescom/status`);
+}
+
+export async function getKarnatakaDSM(
+  siteId: string,
+  params?: Record<string, string | number>
+): Promise<any> {
+  const sp = new URLSearchParams();
+  if (params) Object.entries(params).forEach(([k, v]) => sp.set(k, String(v)));
+  return fetchJson<any>(`${BASE}/dsm/karnataka/${siteId}?${sp.toString()}`, { method: "POST" });
+}
+
+export async function getCurrentWeather(
+  siteId: string,
+  params?: Record<string, string | number>
+): Promise<CurrentWeather> {
+  return fetchJson<CurrentWeather>(`${BASE}/weather/current/${siteId}?${qs(params)}`);
+}

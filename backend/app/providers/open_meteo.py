@@ -69,6 +69,40 @@ class OpenMeteoProvider(WeatherProvider):
 
         return self._parse(payload)
 
+    async def fetch_current(
+        self,
+        latitude: float,
+        longitude: float,
+        timezone: str,
+    ) -> dict:
+        """Fetch the latest real-time conditions (15-min resolution)."""
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": "temperature_2m,cloud_cover,shortwave_radiation,"
+            "direct_normal_irradiance,diffuse_radiation,wind_speed_10m",
+            "timezone": timezone,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.get(_ENDPOINT, params=params)
+                resp.raise_for_status()
+                payload = resp.json()
+        except httpx.HTTPError as exc:
+            logger.error(f"Open-Meteo current request failed: {exc}")
+            raise ProviderError(f"Open-Meteo current request failed: {exc}") from exc
+
+        cur = payload.get("current", {})
+        return {
+            "timestamp": cur.get("time"),
+            "ghi_w_m2": _f(cur.get("shortwave_radiation")),
+            "dni_w_m2": _f(cur.get("direct_normal_irradiance")),
+            "dhi_w_m2": _f(cur.get("diffuse_radiation")),
+            "temperature_c": _f(cur.get("temperature_2m")),
+            "cloud_cover_percent": _f(cur.get("cloud_cover")),
+            "wind_speed_mps": _f(cur.get("wind_speed_10m")),
+        }
+
     async def fetch_archive(
         self,
         latitude: float,

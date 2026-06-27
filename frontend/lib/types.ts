@@ -192,3 +192,38 @@ export interface TrainingRun {
   final_rates: RLRates | null;
   created_at: string;
 }
+
+export interface KarnatakaRegion {
+  name: string;
+  capacity_mw: number;
+  discom: string;
+}
+
+export interface KarnatakaRegions {
+  total_capacity_mw: number;
+  dsm_band_percent: number;
+  regions: Record<string, KarnatakaRegion[]>;
+}
+
+export interface BescomStatus {
+  connector: {
+    operator: string;
+    mode: string;
+    is_live: boolean;
+    note: string;
+  };
+  kerc_solar_band_percent: number;
+  slabs: { range_percent: string; rate_inr_per_kwh: number }[];
+}
+
+export interface CurrentWeather {
+  site_id: string;
+  provider: string;
+  timestamp: string;
+  ghi_w_m2: number;
+  dni_w_m2: number;
+  dhi_w_m2: number;
+  temperature_c: number;
+  cloud_cover_percent: number;
+  wind_speed_mps: number;
+}

@@ -7,8 +7,9 @@ export interface SolarSite {
 }
 
 export const LOCATIONS: SolarSite[] = [
+  { label: "Bangalore — Electronic City", latitude: 12.85, longitude: 77.66, capacity_mw: 40, tilt: 13 },
+  { label: "Pavagada (Shakti Sthala)", latitude: 14.1, longitude: 77.28, capacity_mw: 100, tilt: 14 },
   { label: "Bhadla, Rajasthan", latitude: 27.53, longitude: 71.91, capacity_mw: 100, tilt: 27 },
-  { label: "Pavagada, Karnataka", latitude: 14.1, longitude: 77.28, capacity_mw: 100, tilt: 14 },
   { label: "Kurnool, Andhra Pradesh", latitude: 15.68, longitude: 78.28, capacity_mw: 50, tilt: 16 },
   { label: "New Delhi", latitude: 28.61, longitude: 77.21, capacity_mw: 50, tilt: 28 },
 ];
