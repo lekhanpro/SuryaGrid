@@ -1,0 +1,95 @@
+{
+  "model_name": "solar_forecast_model",
+  "model_version": "20260706154402",
+  "training_data_files": [
+    "solar_agent_training.parquet",
+    "bengaluru_weather_solar_history.parquet"
+  ],
+  "training_data_sources": [
+    {
+      "name": "Open-Meteo Historical Weather Archive",
+      "url": "https://open-meteo.com/en/docs/historical-weather-api",
+      "label": "REAL_COORDINATE_BASED",
+      "geography": "Bengaluru coordinates (12.9716, 77.5946)",
+      "license": "Open-Meteo (CC-BY 4.0)"
+    },
+    {
+      "name": "NASA POWER (daily GHI cross-check)",
+      "url": "https://power.larc.nasa.gov/",
+      "label": "REAL_COORDINATE_BASED",
+      "geography": "Bengaluru coordinates"
+    },
+    {
+      "name": "pvlib Ineichen clear-sky (derived feature)",
+      "url": "https://pvlib-python.readthedocs.io/",
+      "label": "ESTIMATED_FROM_REAL"
+    }
+  ],
+  "training_geography": "Bengaluru, Karnataka, India (coordinate-based)",
+  "target_geography": "Bengaluru, Karnataka, India",
+  "local_data_available": true,
+  "domain_shift_risk": "LOW",
+  "features": [
+    "hour_sin",
+    "hour_cos",
+    "doy_sin",
+    "doy_cos",
+    "month",
+    "cloud_cover_percent",
+    "temperature_c",
+    "relative_humidity_percent",
+    "wind_speed_mps",
+    "surface_pressure_hpa",
+    "precipitation_mm",
+    "clearsky_ghi_wm2"
+  ],
+  "target": "target_ghi_wm2",
+  "train_rows": 21043,
+  "test_rows": 5261,
+  "train_test_split_method": "chronological_80_20",
+  "metrics": {
+    "chosen_model": "hist_gradient_boosting",
+    "mae": 29.1238,
+    "rmse": 57.5115,
+    "mape_percent": 29.499,
+    "r2": 0.9563,
+    "candidates": {
+      "random_forest": {
+        "mae": 29.193,
+        "rmse": 58.8228,
+        "mape_percent": 24.016,
+        "r2": 0.9543
+      },
+      "hist_gradient_boosting": {
+        "mae": 29.1238,
+        "rmse": 57.5115,
+        "mape_percent": 29.499,
+        "r2": 0.9563
+      }
+    }
+  },
+  "limitations": [
+    "Predicts global horizontal irradiance (GHI, W/m2), NOT PV plant generation.",
+    "PV output must be derived from user-provided capacity via pvlib; it is never predicted directly (no real local PV generation dataset exists).",
+    "Trained on Open-Meteo reanalysis at the city coordinate; a specific rooftop microclimate may differ. Retrain with on-site pyranometer data when available.",
+    "Sub-hourly horizons resolve to the nearest hour (hourly source data)."
+  ],
+  "production_ready": true,
+  "reason_if_not_production_ready": null,
+  "uses_synthetic_data": false,
+  "synthetic_percentage": 0.0,
+  "uses_non_local_data": false,
+  "non_local_data_percentage": 0.0,
+  "data_mode": "real",
+  "source_status": [
+    "REAL_COORDINATE_BASED",
+    "ESTIMATED_FROM_REAL"
+  ],
+  "prediction_type": "irradiance_forecast",
+  "model_type": "hist_gradient_boosting",
+  "created_at": "2026-07-06T15:44:02.973336+00:00",
+  "notes": [
+    "production_ready_for_pv_generation=false (irradiance model only).",
+    "NASA POWER vs Open-Meteo daily GHI agreement documented in the build manifest."
+  ]
+}

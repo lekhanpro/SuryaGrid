@@ -49,10 +49,10 @@ export default function Home() {
         <h1 className="text-5xl font-bold text-white mb-3">
           Surya<span className="text-gradient">Grid</span> AI
         </h1>
-        <p className="text-xl text-white/60 mb-3">Solar Nowcasting &amp; DSM Penalty Prediction</p>
+        <p className="text-xl text-white/60 mb-3">Real-Data Solar Forecasting &amp; DSM Risk Engine</p>
         <p className="text-sm text-white/35 mb-10 max-w-md mx-auto leading-relaxed">
-          A multi-agent intelligence system for solar generation forecasting, deviation
-          settlement analysis, and grid compliance monitoring.
+          Phase 1.5 · Real weather (Open-Meteo), Kaggle-trained ML forecasting, an advanced
+          configurable DSM engine, substation data, and a fully sourced multi-agent pipeline.
         </p>
         <Link href="/dashboard" className="btn-primary text-base px-8 py-3.5">
           Open Dashboard

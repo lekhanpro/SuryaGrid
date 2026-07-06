@@ -1,0 +1,2 @@
+# Trained ML model artifacts are written here: solar_forecast_model.joblib and
+# model_metadata.json. See docs/ML_PIPELINE.md.

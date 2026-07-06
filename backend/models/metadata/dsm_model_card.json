@@ -1,0 +1,71 @@
+{
+  "model_name": "dsm_classifier",
+  "model_version": "20260706154404",
+  "training_data_files": [
+    "dsm_agent_training.parquet",
+    "bengaluru_weather_solar_history.parquet"
+  ],
+  "training_data_sources": [
+    {
+      "name": "Open-Meteo Historical Weather Archive (Bengaluru)",
+      "url": "https://open-meteo.com/en/docs/historical-weather-api",
+      "label": "REAL_COORDINATE_BASED"
+    },
+    {
+      "name": "KERC/CERC DSM regulatory framework (structure only, no rupees)",
+      "url": "https://kerc.karnataka.gov.in/",
+      "label": "NEEDS_OFFICIAL_SOURCE"
+    }
+  ],
+  "training_geography": "Bengaluru, Karnataka, India (coordinate-based)",
+  "target_geography": "Bengaluru, Karnataka, India",
+  "local_data_available": true,
+  "domain_shift_risk": "LOW",
+  "features": [
+    "hour_sin",
+    "hour_cos",
+    "doy_sin",
+    "doy_cos",
+    "cloud_cover_percent",
+    "relative_humidity_percent",
+    "wind_speed_mps",
+    "surface_pressure_hpa",
+    "precipitation_mm",
+    "scheduled_ghi_wm2"
+  ],
+  "target": "breach_risk",
+  "train_rows": 9624,
+  "test_rows": 2407,
+  "train_test_split_method": "chronological_80_20",
+  "metrics": {
+    "breach_rate": 0.4311,
+    "accuracy": 0.7117,
+    "precision": 0.7114,
+    "recall": 0.8893,
+    "f1": 0.7905,
+    "roc_auc": 0.7489
+  },
+  "limitations": [
+    "Predicts breach of a +/-15% MODELLING band, not an official KERC/CERC band.",
+    "Does NOT compute rupee DSM charges. Official rates are market-linked and pending (NEEDS_OFFICIAL_TARIFF_SOURCE).",
+    "'Scheduled' injection is a day-ahead persistence proxy on irradiance, not a metered SLDC schedule. No substation-level DSM (no real capacity/feeder-load data)."
+  ],
+  "production_ready": true,
+  "reason_if_not_production_ready": null,
+  "uses_synthetic_data": false,
+  "synthetic_percentage": 0.0,
+  "uses_non_local_data": false,
+  "non_local_data_percentage": 0.0,
+  "data_mode": "real",
+  "source_status": [
+    "REAL_COORDINATE_BASED",
+    "NEEDS_OFFICIAL_SOURCE"
+  ],
+  "prediction_type": "dsm_deviation_breach_risk",
+  "model_type": "random_forest_classifier",
+  "created_at": "2026-07-06T15:44:04.426346+00:00",
+  "notes": [
+    "rules_engine=D:\\Suryagrid AI\\backend\\models\\trained\\dsm_rules_engine.json",
+    "emits_rupee_values=false (framework-only DSM recommendations)."
+  ]
+}

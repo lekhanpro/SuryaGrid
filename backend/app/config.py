@@ -23,6 +23,20 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Data mode (Phase 1.7). "real" forbids any synthetic/demo fallback; "demo"
+    # permits labelled synthetic data for offline UI demos only.
+    APP_DATA_MODE: str = "real"
+    # Default target region for real-data ML (Bengaluru/Karnataka/India project).
+    DEFAULT_REGION: str = "bengaluru"
+
+    # Weather provider (Phase 1.5). Open-Meteo is key-less; others reserved.
+    WEATHER_PROVIDER: str = "open-meteo"
+    WEATHER_API_BASE_URL: str = "https://api.open-meteo.com/v1/forecast"
+
+    # DSM defaults (see docs/DSM_RULE_SOURCES.md)
+    DSM_DEFAULT_REGION: str = "Karnataka"
+    DSM_DEFAULT_RULE_PROFILE: str = "kerc-solar"
+
     # Security
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"

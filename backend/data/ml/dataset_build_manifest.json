@@ -1,0 +1,152 @@
+{
+  "region": "Bengaluru (Bangalore)",
+  "coordinates": [
+    12.9716,
+    77.5946
+  ],
+  "data_mode": "real",
+  "built_at": "2026-07-06T15:42:45.197980+00:00",
+  "datasets": {
+    "weather_solar_history": {
+      "status": "OK",
+      "rows": 26304,
+      "file": "D:\\Suryagrid AI\\backend\\data\\ml\\bengaluru_weather_solar_history.parquet",
+      "source_label": "REAL_COORDINATE_BASED",
+      "columns": [
+        "timestamp_local",
+        "temperature_c",
+        "relative_humidity_percent",
+        "cloud_cover_percent",
+        "shortwave_radiation_wm2",
+        "direct_radiation_wm2",
+        "direct_normal_irradiance_wm2",
+        "diffuse_radiation_wm2",
+        "wind_speed_mps",
+        "surface_pressure_hpa",
+        "precipitation_mm",
+        "weather_code",
+        "date",
+        "year",
+        "month",
+        "day_of_year",
+        "hour_of_day",
+        "latitude",
+        "longitude",
+        "source",
+        "source_provider",
+        "source_url",
+        "clearsky_ghi_wm2",
+        "clearness_index",
+        "is_daylight",
+        "nasa_ghi_kwh_m2_day",
+        "source_name",
+        "data_geography",
+        "ingestion_time",
+        "quality_score"
+      ],
+      "date_range": [
+        "2022-01-01",
+        "2024-12-31"
+      ],
+      "nasa_power_cross_check": {
+        "days_compared": 1096,
+        "pearson_r": 0.8728,
+        "mean_open_meteo_kwh_m2_day": 5.547,
+        "mean_nasa_kwh_m2_day": 5.231
+      },
+      "peak_ghi_wm2": 1044.0
+    },
+    "substations": {
+      "status": "OK",
+      "rows": 344,
+      "file": "D:\\Suryagrid AI\\backend\\data\\ml\\bengaluru_substations_cleaned.parquet",
+      "grid_file": "D:\\Suryagrid AI\\backend\\data\\ml\\bengaluru_grid_features.parquet",
+      "source_label": "REAL_BENGALURU/REAL_KARNATAKA",
+      "quality": {
+        "total_substations": 344,
+        "with_voltage_kv": 141,
+        "with_operator": 147,
+        "with_district": 0,
+        "with_capacity_mva": 0,
+        "pct_voltage_known": 41.0,
+        "pct_capacity_known": 0.0
+      }
+    },
+    "load_history": {
+      "status": "OK",
+      "rows": 11664,
+      "file": "D:\\Suryagrid AI\\backend\\data\\ml\\karnataka_or_india_load_history.parquet",
+      "source_label": "REAL_INDIA",
+      "dataset": "smarthkaushal/energy-demand-profile",
+      "geography": "India (national) - NOT Bengaluru-specific"
+    },
+    "solar_agent_training": {
+      "status": "OK",
+      "rows": 26304,
+      "file": "D:\\Suryagrid AI\\backend\\data\\ml\\solar_agent_training.parquet",
+      "features": [
+        "hour_sin",
+        "hour_cos",
+        "doy_sin",
+        "doy_cos",
+        "month",
+        "cloud_cover_percent",
+        "temperature_c",
+        "relative_humidity_percent",
+        "wind_speed_mps",
+        "surface_pressure_hpa",
+        "precipitation_mm",
+        "clearsky_ghi_wm2"
+      ],
+      "target": "target_ghi_wm2",
+      "prediction_type": "irradiance_forecast"
+    },
+    "cloud_agent_training": {
+      "status": "OK",
+      "rows": 12041,
+      "file": "D:\\Suryagrid AI\\backend\\data\\ml\\cloud_agent_training.parquet",
+      "features": [
+        "hour_sin",
+        "hour_cos",
+        "doy_sin",
+        "doy_cos",
+        "cloud_cover_percent",
+        "relative_humidity_percent",
+        "temperature_c",
+        "wind_speed_mps",
+        "surface_pressure_hpa",
+        "precipitation_mm"
+      ],
+      "target": "irradiance_drop_risk",
+      "positive_rate": 0.1221,
+      "prediction_type": "irradiance_drop_risk"
+    },
+    "dsm_agent_training": {
+      "status": "OK",
+      "rows": 12031,
+      "file": "D:\\Suryagrid AI\\backend\\data\\ml\\dsm_agent_training.parquet",
+      "features": [
+        "hour_sin",
+        "hour_cos",
+        "doy_sin",
+        "doy_cos",
+        "cloud_cover_percent",
+        "relative_humidity_percent",
+        "wind_speed_mps",
+        "surface_pressure_hpa",
+        "precipitation_mm",
+        "scheduled_ghi_wm2"
+      ],
+      "target": "breach_risk",
+      "band_percent": 15.0,
+      "breach_rate": 0.4311,
+      "prediction_type": "dsm_deviation_band"
+    },
+    "rl_environment_dataset": {
+      "status": "NOT_AVAILABLE",
+      "rows": 0,
+      "file": null,
+      "reason": "RL environment needs real local load time series AND official tariff/DSM rupee terms. Load=present(non-local India); official tariff rupees=absent (NEEDS_OFFICIAL_TARIFF_SOURCE). Refusing to synthesise a reward environment."
+    }
+  }
+}

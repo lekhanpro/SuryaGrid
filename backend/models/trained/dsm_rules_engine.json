@@ -1,0 +1,30 @@
+{
+  "engine": "suryagrid_dsm_framework",
+  "version": "1.7",
+  "emits_rupee_values": false,
+  "band_definition_percent": 15.0,
+  "band_source_label": "FALLBACK_DEFAULT",
+  "tariff_status": "NEEDS_OFFICIAL_TARIFF_SOURCE",
+  "tariff_reference_file": "backend/data/ml/tariff_dsm_rules_official_or_pending.json",
+  "bands": {
+    "WITHIN_BAND": {
+      "condition": "abs(deviation_percent) <= band",
+      "recommendation": "No action required; injection within the modelled band.",
+      "rupee_charge": null
+    },
+    "OVER_INJECTION": {
+      "condition": "deviation_percent > band",
+      "recommendation": "Actual injection exceeds schedule beyond the band. Revise the day-ahead schedule upward / curtail if instructed by SLDC. Rupee settlement pending official CERC/KERC rate.",
+      "rupee_charge": null
+    },
+    "UNDER_INJECTION": {
+      "condition": "deviation_percent < -band",
+      "recommendation": "Actual injection below schedule beyond the band. Revise the day-ahead schedule downward / arrange balancing. Rupee settlement pending official CERC/KERC rate.",
+      "rupee_charge": null
+    }
+  },
+  "regulatory_authorities": [
+    "CERC (DSM Regulations, 2024)",
+    "KERC (F&S&DSM Regulations)"
+  ]
+}

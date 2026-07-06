@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16
@@ -11,27 +9,72 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U suryagrid -d suryagrid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     ports:
       - "8000:8000"
-    env_file: .env.example
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://suryagrid:suryagrid@postgres:5432/suryagrid
+      REDIS_URL: redis://redis:6379/0
+      WEATHER_PROVIDER: ${WEATHER_PROVIDER:-open-meteo}
+      WEATHER_API_BASE_URL: ${WEATHER_API_BASE_URL:-https://api.open-meteo.com/v1/forecast}
+      DSM_DEFAULT_REGION: ${DSM_DEFAULT_REGION:-Karnataka}
+      DSM_DEFAULT_RULE_PROFILE: ${DSM_DEFAULT_RULE_PROFILE:-kerc-solar}
+      CORS_ORIGINS: '["http://localhost:3000"]'
+      # Kaggle credentials are optional; manual dataset placement works without them.
+      KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
+      KAGGLE_KEY: ${KAGGLE_KEY:-}
+    volumes:
+      # Mounted so Kaggle datasets / trained models persist and can be dropped in.
+      - ./backend/data:/app/data
+      - ./backend/models:/app/models
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Baked into the client bundle; the browser calls the host-mapped backend port.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
     ports:
       - "3000:3000"
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   pgdata:

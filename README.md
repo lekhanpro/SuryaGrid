@@ -1,170 +1,148 @@
-# Suryagrid AI
+# Suryagrid AI — Real-Data Solar Forecasting & DSM Risk Engine (Phase 1.5)
 
-**Solar Irradiance Nowcasting + DSM Penalty Prediction**
+A multi-agent platform that turns **real** weather/irradiance data into a solar
+generation forecast (physics **and** ML), compares it against the scheduled generation,
+and classifies **Deviation Settlement Mechanism (DSM)** risk with an estimated charge —
+backed by a **source registry** so every formula, threshold and dataset is traceable.
 
-A multi-agent platform that turns real weather/irradiance data into a solar
-generation nowcast, compares it against the scheduled (declared) generation, and
-classifies Deviation Settlement Mechanism (DSM) penalty risk with estimated cost.
+> Phase 1.5 is real-data solar forecasting + DSM risk engine + dashboard. It does **not**
+> include blockchain, energy trading, RL optimization, SCADA/hardware control, or payment
+> settlement. (Pre-existing Phase 1 RL/settlement modules are retained, not extended.)
 
 ## What it does
 
-1. Pulls **real hourly irradiance** (GHI / DNI / DHI), temperature, cloud cover and
-   wind for any site from **Open-Meteo** (free, no API key).
-2. Computes **physics-based AC generation** with **pvlib** (solar position →
-   plane-of-array transposition → cell temperature → PVWatts DC → inverter AC).
-3. Derives the **day-ahead committed schedule** from a clear-sky model — the
-   realistic baseline a generator declares to the grid.
-4. Runs **DSM classification**: deviation vs the allowed band → `NO_PENALTY` /
-   `PENALTY_RISK` / `INVALID_SCHEDULE`, with an estimated charge on the deviated energy.
-5. Scores **operational risk** (LOW / MEDIUM / HIGH / CRITICAL) and produces a
-   human-readable explanation.
-6. Serves a **24h+ timeline** (time, generation, energy, expected DSM values) and a
-   day summary, rendered in a Next.js dashboard.
+1. **Real weather** — hourly GHI/DNI/DHI, temperature, humidity, cloud, wind, pressure,
+   precipitation from **Open-Meteo** (free, key-less), cached in Redis, persisted in the DB.
+2. **ML + physics forecasting** — `formula` (pvlib), `ml` (scikit-learn trained on the
+   Kaggle solar dataset), or `hybrid`. Falls back to formula when no model — reported, never faked.
+3. **Advanced DSM** — configurable rule profiles (region · regulator · denominator · slab
+   bands); KERC/BESCOM and CERC frameworks seeded, with source status.
+4. **Fuzzy risk** — genuine fuzzy inference (LOW/MEDIUM/HIGH/CRITICAL).
+5. **Locations & substations** — OpenStreetMap substations + operator CSV, nearest-substation
+   mapping, and per-site data-coverage.
+6. **Sourced** — every value classified & cited (`docs/SOURCE_REGISTRY.md`).
+7. **Dashboard** — real operational UI; shows a clear "Backend Offline" banner instead of
+   faking data.
 
-All numbers are deterministic and reproducible — pvlib does the math, no LLM in the
-numeric path.
+## Quick start (Docker — full stack)
 
-## Architecture
-
+```bash
+cp .env.example .env        # optional; sensible defaults work out of the box
+docker compose up --build
 ```
-Open-Meteo (real GHI/DNI/DHI, temp, cloud, wind)
-      │
-      ▼
-ForecastAgent (pvlib)  ── clear-sky baseline ──┐
-      │ nowcast (cloud-affected)               │ scheduled MW
-      ▼                                         ▼
-DSMClassifierAgent  ── deviation vs band ──► penalty / cost
-      │
-      ▼
-RiskAgent ──► ExplanationAgent ──► FastAPI ──► Next.js dashboard
-(OrchestratorAgent sequences the per-interval pipeline; ForecastService runs the timeline.)
+
+- **Frontend:**  http://localhost:3000
+- **Backend Swagger:**  http://localhost:8000/docs
+- **Backend health:**  http://localhost:8000/api/v1/health
+
+Services: `frontend` (:3000), `backend` (:8000), `postgres` (:5432), `redis` (:6379).
+See [docs/DOCKER_ARCHITECTURE.md](docs/DOCKER_ARCHITECTURE.md).
+
+## Load the Kaggle dataset
+
+The ML model trains on the Kaggle **Solar Radiation Prediction** dataset (NASA HI-SEAS,
+`dronio/SolarEnergy`). Two options:
+
+- **Kaggle API** — set credentials (never commit `kaggle.json`), then ingest:
+  ```bash
+  export KAGGLE_USERNAME=you KAGGLE_KEY=xxxx   # or put them in .env
+  curl -X POST http://localhost:8000/api/v1/ml/datasets/ingest-kaggle
+  ```
+- **Manual** — drop the CSV into `backend/data/raw/kaggle/` (this folder is mounted into
+  the container). If neither is present, the API reports **"Kaggle dataset not loaded"** —
+  it never silently substitutes data.
+
+## Configure the live weather provider
+
+Open-Meteo is the default and needs **no key**. It is modular — set `WEATHER_PROVIDER`
+(and `WEATHER_API_BASE_URL`) in `.env`; Solcast/NASA POWER slots are reserved. Check status:
+```bash
+curl http://localhost:8000/api/v1/weather/providers/status
+```
+
+## Import substation data
+
+```bash
+# From OpenStreetMap (Overpass, ODbL) around a point:
+curl -X POST http://localhost:8000/api/v1/substations/import \
+  -H "Content-Type: application/json" \
+  -d '{"latitude":12.97,"longitude":77.59,"radius_km":25}'
+
+# Or from an operator CSV (name,voltage_level,operator,latitude,longitude,district,state,country):
+curl -X POST http://localhost:8000/api/v1/substations/import \
+  -H "Content-Type: application/json" -d '{"csv_text":"name,latitude,longitude\nX SS,12.9,77.6\n"}'
+```
+See [docs/LOCATION_AND_SUBSTATION_DATA.md](docs/LOCATION_AND_SUBSTATION_DATA.md).
+
+## Train a model
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/ml/datasets/build-augmented?source=kaggle"
+curl -X POST "http://localhost:8000/api/v1/ml/train?model_name=auto"
+curl http://localhost:8000/api/v1/ml/model/status
+```
+If Kaggle isn't loaded, build from `source=weather` or `source=synthetic` instead
+(labelled accordingly). See [docs/ML_PIPELINE.md](docs/ML_PIPELINE.md).
+
+## Run a prediction
+
+```bash
+# Full end-to-end prediction for a site (weather -> forecast -> DSM -> fuzzy risk -> sources)
+curl "http://localhost:8000/api/v1/predict/primary-site?latitude=14.10&longitude=77.28&capacity_mw=2050&mode=auto&regulator=KERC/BESCOM"
+
+# Advanced DSM check
+curl -X POST http://localhost:8000/api/v1/dsm/advanced-check -H "Content-Type: application/json" \
+  -d '{"scheduled_generation_mw":1600,"predicted_generation_mw":1450,"installed_capacity_mw":2050,"regulator":"KERC/BESCOM"}'
+```
+Full response schema + all endpoints: [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
+
+## Local development (without Docker)
+
+```bash
+# Backend (SQLite default, no server needed)
+cd backend && pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd frontend && npm install && npm run dev   # http://localhost:3000
+```
+
+## Tests & lint
+
+```bash
+cd backend && python -m pytest tests/ -q       # 77 tests, offline (no network)
+ruff check app tests && ruff format --check app tests
+cd frontend && npm run build                    # type-check + build
 ```
 
 ## Agents
 
-| Agent | Responsibility |
-|-------|---------------|
-| ForecastAgent | pvlib physics: irradiance → POA → cell temp → AC power (MW) + confidence |
-| DSMClassifierAgent | Deviation vs allowed band, penalty status and chargeable cost |
-| RiskAgent | Deterministic 0–100 risk score and LOW/MEDIUM/HIGH/CRITICAL level |
-| ExplanationAgent | Plain-language interval summary |
-| OrchestratorAgent | Sequences the agents for a single interval |
-
-## Data provider
-
-`app/providers/` defines a `WeatherProvider` interface; `OpenMeteoProvider` is the
-default real source. New sources (Solcast, NASA POWER) implement the same interface
-and the pvlib pipeline runs unchanged.
-
-## Run
-
-### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-API docs: http://localhost:8000/docs
-
-### Live demo (real data, no server needed)
-```bash
-cd backend
-python run_all_demo.py
-```
-
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Dashboard: http://localhost:3000
-
-> Note: the dashboard is served at the root path `/` in all environments.
-
-### Docker Compose (full stack)
-```bash
-docker-compose up --build
-```
-
-## API
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/health` | Health check (DB engine + record counts) |
-| POST | `/api/v1/sites` | Register a solar site (persisted) |
-| GET | `/api/v1/sites` / `/sites/{id}` | List / get sites |
-| GET | `/api/v1/weather/{site_id}` | Real hourly irradiance/weather (persisted) |
-| POST | `/api/v1/predict` | Single-interval DSM evaluation from explicit irradiance |
-| POST | `/api/v1/dsm/check` | Standalone DSM classification |
-| GET | `/api/v1/timeline/{site_id}` | Hourly nowcast + DSM timeline + summary |
-| GET | `/api/v1/summary/{site_id}` | Day summary |
-| GET | `/api/v1/energy/{site_id}` | Production vs consumption balance |
-| GET | `/api/v1/consumption/profiles` | Residential/commercial/industrial load curves |
-| POST | `/api/v1/settle` / `/settle/day/{id}` | Reward/penalty/discount settlement (persisted) |
-| GET | `/api/v1/settlements/{site_id}` | Stored settlement history |
-| GET | `/api/v1/rl/rates` | Current RL-optimized rates |
-| POST | `/api/v1/rl/train` | Train the RL policy on real historical data |
-| GET | `/api/v1/rl/runs` | Training run history |
-
-`timeline`/`summary`/`weather` accept query params (`latitude`, `longitude`,
-`capacity_mw`, `tilt`, `azimuth`, `scheduled_mw`, `threshold_percent`,
-`penalty_rate`, `forecast_days`) so any location works without pre-registering a site.
-
-## Test
-```bash
-cd backend
-python -m pytest tests/ -q
-```
-Tests use a deterministic offline provider, so they never depend on the network.
-
-Lint/format (matches CI):
-```bash
-cd backend
-ruff check app tests
-ruff format --check app tests
-```
-
-## CI/CD
-
-- **CI** (`.github/workflows/ci.yml`) runs on every push and PR to `main`: ruff
-  lint/format, backend pytest, and the Next.js build (with artifact validation).
-  Dependencies are cached.
-- **CD** (`.github/workflows/deploy.yml`) publishes the frontend to GitHub Pages
-  **only after CI succeeds** (or via manual dispatch). It validates the Pages
-  prerequisite, detects the base path from the actual Pages config (no hosting
-  assumptions), validates the build artifact, and verifies the live URL returns 200.
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for details.
+12 deterministic coordinators (no LLM in the numeric path): SourceRegistry, KaggleData,
+LiveWeather, LocationData, FeatureEngineering, Forecast, DSMEngine, FuzzyRisk, Explanation,
+Orchestrator, APIManagement, Persistence. See [docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md).
 
 ## Tech stack
 
-- **Backend**: Python 3.11+, FastAPI, Pydantic, pvlib, pandas/numpy, httpx
-- **Data**: Open-Meteo forecast + archive (real, free, key-less)
-- **Database**: SQLite (local) / PostgreSQL + TimescaleDB (production), SQLAlchemy async
-- **RL**: Gymnasium digital twin + numpy REINFORCE policy gradient
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS, Recharts
-- **Deploy**: Docker Compose
+Python 3.12 · FastAPI · pvlib · scikit-learn · pandas/numpy · SQLAlchemy (SQLite/PostgreSQL) ·
+Redis · Next.js 14 / React / Tailwind / Recharts · Docker Compose.
 
-## Database
+## Documentation
 
-Persistence is on by default. The app uses **SQLite** locally (no server needed,
-file `suryagrid.db`) and **PostgreSQL/TimescaleDB** in production — just set
-`DATABASE_URL`. Tables are created automatically on startup (`init_db`); Alembic
-migrations are provided for managed Postgres deployments. Sites, weather readings,
-forecasts, settlements and RL training runs are all persisted.
+[Real-Data Phase 1.5](docs/REAL_DATA_PHASE1_5.md) ·
+[Source Registry](docs/SOURCE_REGISTRY.md) ·
+[Formula Sources](docs/FORMULA_SOURCES.md) ·
+[DSM Rule Sources](docs/DSM_RULE_SOURCES.md) ·
+[Data Source Catalog](docs/DATA_SOURCE_CATALOG.md) ·
+[ML Pipeline](docs/ML_PIPELINE.md) ·
+[Locations & Substations](docs/LOCATION_AND_SUBSTATION_DATA.md) ·
+[Agent Workflows](docs/AGENT_WORKFLOWS.md) ·
+[API Reference](docs/API_REFERENCE.md) ·
+[Docker Architecture](docs/DOCKER_ARCHITECTURE.md)
 
-## Reinforcement Learning (trained on real data)
+## Honesty & limitations
 
-The reward policy is trained on **real historical irradiance** from the Open-Meteo
-archive: each past day is run through the pvlib physics engine to build
-production/target curves, then a REINFORCE policy gradient optimizes the
-penalty/bonus/discount rates on that real-data digital twin. Trigger training via
-`POST /rl/train` (defaults to real data) or the RL Lab page in the dashboard.
-
-## Notes & next steps
-
-- JWT auth and per-route rate limiting are scaffolded but not enforced yet.
-- The RL policy uses a numpy REINFORCE implementation (no heavy GPU deps); swap in
-  Stable-Baselines3 PPO on a GPU host for larger-scale training when needed.
-- Plant/SCADA connectors and multi-tenant auth are the next phases per `PROJECT_PLAN.md`.
+Decision-support estimates, not a settlement of record. Kaggle HI-SEAS data is
+irradiance-only (Hawaii); the model predicts irradiance and converts via pvlib. "Actual
+injection" is the nowcast until a metered SLDC feed is connected. DSM figures depend on
+the live regulatory order for the region/regulator/period and are marked pending until
+verified. Synthetic data is a labelled fallback only.

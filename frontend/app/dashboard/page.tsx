@@ -1,205 +1,203 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SolarPanel3D from "@/components/svg/SolarPanel3D";
 import RiskGauge3D from "@/components/svg/RiskGauge3D";
-import EnergyFlow3D from "@/components/svg/EnergyFlow3D";
 import MiniTimeline from "@/components/charts/MiniTimeline";
 import MetricCard from "@/components/cards/MetricCard";
-import { getTimeline } from "@/lib/api";
+import OfflineBanner from "@/components/OfflineBanner";
+import ModelProvenancePanel from "@/components/ModelProvenancePanel";
+import { API_BASE, getTimeline, predictSite, probeBackend } from "@/lib/api";
 import type { TimelineData, TimelineEntry } from "@/lib/types";
 
 const LOCATIONS = [
-  { label: "Bhadla, Rajasthan", lat: 27.53, lon: 71.91 },
-  { label: "Pavagada, Karnataka", lat: 14.1, lon: 77.28 },
-  { label: "Kurnool, Andhra Pradesh", lat: 15.68, lon: 78.28 },
-  { label: "New Delhi", lat: 28.61, lon: 77.21 },
+  { label: "Pavagada, Karnataka", lat: 14.1, lon: 77.28, cap: 2050, regulator: "KERC/BESCOM" },
+  { label: "Bhadla, Rajasthan", lat: 27.53, lon: 71.91, cap: 2245, regulator: "CERC" },
+  { label: "Kurnool, Andhra Pradesh", lat: 15.68, lon: 78.28, cap: 1000, regulator: "CERC" },
+  { label: "Bengaluru (Electronic City)", lat: 12.85, lon: 77.66, cap: 40, regulator: "KERC/BESCOM" },
 ];
 
 export default function Dashboard() {
-  const [data, setData] = useState<TimelineData | null>(null);
+  const [online, setOnline] = useState<boolean | null>(null);
+  const [pred, setPred] = useState<any>(null);
+  const [tl, setTl] = useState<TimelineData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    location: 0,
-    capacity_mw: 100,
-    tilt: 27,
-    scheduled_mw: "",
-    threshold_percent: 10,
-    penalty_rate: 12000,
-  });
+  const [err, setErr] = useState("");
+  const [form, setForm] = useState({ location: 0, capacity_mw: 2050, mode: "auto", scheduled_mw: "" });
+
+  useEffect(() => {
+    probeBackend().then((p) => setOnline(p.online));
+  }, []);
 
   const run = async () => {
     setLoading(true);
+    setErr("");
     try {
       const loc = LOCATIONS[form.location];
       const params: Record<string, string | number> = {
         latitude: loc.lat,
         longitude: loc.lon,
         capacity_mw: form.capacity_mw,
-        tilt: form.tilt,
-        threshold_percent: form.threshold_percent,
-        penalty_rate: form.penalty_rate,
-        forecast_days: 1,
+        mode: form.mode,
+        regulator: loc.regulator,
       };
       if (form.scheduled_mw !== "") params.scheduled_mw = Number(form.scheduled_mw);
-      const tl = await getTimeline("primary-site", params);
-      setData(tl);
+      const [p, t] = await Promise.all([
+        predictSite("primary-site", params),
+        getTimeline("primary-site", {
+          latitude: loc.lat,
+          longitude: loc.lon,
+          capacity_mw: form.capacity_mw,
+          forecast_days: 1,
+        }),
+      ]);
+      setPred(p);
+      setTl(t);
     } catch (e: any) {
-      alert(e.message);
+      setErr(e.message);
     }
     setLoading(false);
   };
 
-  const timeline: TimelineEntry[] = data?.timeline ?? [];
-  // Headline = the interval with highest forecast generation.
-  const peak = timeline.reduce<TimelineEntry | null>(
-    (best, e) => (!best || e.predicted_generation_mw > best.predicted_generation_mw ? e : best),
-    null
-  );
-  const worst = timeline.reduce<TimelineEntry | null>(
-    (w, e) => (!w || e.risk_score > w.risk_score ? e : w),
-    null
-  );
-  const genPct = peak ? (peak.predicted_generation_mw / form.capacity_mw) * 100 : 0;
-  const s = data?.summary;
+  const timeline: TimelineEntry[] = tl?.timeline ?? [];
+  const genPct = pred ? (pred.predicted_generation_mw / form.capacity_mw) * 100 : 0;
+  const penalty = pred?.penalty_status === "PENALTY_RISK";
 
   return (
     <div className="max-w-7xl mx-auto animate-fade-up">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Solar Generation Monitor</h1>
         <p className="text-white/40 mt-1">
-          Live irradiance nowcasting and DSM penalty analysis · real data via Open-Meteo + pvlib
+          Real-data nowcast · ML/hybrid forecast · advanced DSM · fuzzy risk — live via Open-Meteo + pvlib.
         </p>
       </div>
 
-      {/* Input Panel */}
-      <div className="glass-card p-6 mb-8">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-bold text-white/70 uppercase tracking-wider">Site &amp; Schedule</h2>
-          <button onClick={run} disabled={loading} className="btn-primary">
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                Fetching live data
-              </span>
-            ) : "Run Live Forecast"}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="col-span-2 md:col-span-1">
-            <label className="text-[10px] text-white/40 block mb-1 uppercase tracking-wider">Location</label>
-            <select
-              className="input-field"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: Number(e.target.value) })}
-            >
-              {LOCATIONS.map((l, i) => (
-                <option key={i} value={i} className="bg-slate-800">{l.label}</option>
-              ))}
-            </select>
-          </div>
-          <Field label="Capacity" unit="MW" value={form.capacity_mw} onChange={(v) => setForm({ ...form, capacity_mw: v })} />
-          <Field label="Tilt" unit="°" value={form.tilt} onChange={(v) => setForm({ ...form, tilt: v })} />
-          <div>
-            <label className="text-[10px] text-white/40 block mb-1 uppercase tracking-wider">Scheduled <span className="text-white/20">(MW, blank = clear-sky)</span></label>
-            <input
-              type="number" step="any" className="input-field" placeholder="auto"
-              value={form.scheduled_mw}
-              onChange={(e) => setForm({ ...form, scheduled_mw: e.target.value })}
-            />
-          </div>
-          <Field label="Threshold" unit="%" value={form.threshold_percent} onChange={(v) => setForm({ ...form, threshold_percent: v })} />
-          <Field label="Penalty Rate" unit="₹/MWh" value={form.penalty_rate} onChange={(v) => setForm({ ...form, penalty_rate: v })} />
-        </div>
-      </div>
+      {online === false && <OfflineBanner base={API_BASE} />}
 
-      {/* Results */}
-      {data && peak && worst && s && (
+      {online && <ModelProvenancePanel />}
+
+      {online && (
+        <div className="glass-card p-6 mb-6">
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <h2 className="text-sm font-bold text-white/70 uppercase tracking-wider">Site &amp; Forecast</h2>
+            <button onClick={run} disabled={loading} className="btn-primary">
+              {loading ? "Running full prediction…" : "Run Full Prediction"}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label className="eyebrow block mb-1">Location</label>
+              <select className="input-field" value={form.location}
+                onChange={(e) => {
+                  const i = Number(e.target.value);
+                  setForm({ ...form, location: i, capacity_mw: LOCATIONS[i].cap });
+                }}>
+                {LOCATIONS.map((l, i) => (
+                  <option key={i} value={i} className="bg-slate-800">{l.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">Capacity (MW)</label>
+              <input type="number" step="any" className="input-field" value={form.capacity_mw}
+                onChange={(e) => setForm({ ...form, capacity_mw: parseFloat(e.target.value) || 0 })} />
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">Forecast mode</label>
+              <select className="input-field" value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}>
+                {["auto", "formula", "ml", "hybrid"].map((m) => <option key={m} value={m} className="bg-slate-800">{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="eyebrow block mb-1">Scheduled MW (blank=clear-sky)</label>
+              <input type="number" step="any" className="input-field" placeholder="auto" value={form.scheduled_mw}
+                onChange={(e) => setForm({ ...form, scheduled_mw: e.target.value })} />
+            </div>
+          </div>
+          {err && <div className="mt-4 text-red-300 text-sm bg-red-500/5 border border-red-500/20 rounded-lg p-3">{err}</div>}
+        </div>
+      )}
+
+      {pred && (
         <>
-          {/* Summary metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <MetricCard title="Predicted Energy" value={s.predicted_energy_mwh.toFixed(1)} unit="MWh" color="blue" subtitle="Today, cloud-adjusted" />
-            <MetricCard title="Peak Output" value={s.peak_generation_mw.toFixed(1)} unit="MW" color="green" subtitle={`${((s.peak_generation_mw / form.capacity_mw) * 100).toFixed(0)}% of capacity`} />
-            <MetricCard title="Penalty Intervals" value={`${s.penalty_intervals}/${s.daylight_intervals}`} color="orange" subtitle="Daylight hours over band" />
-            <MetricCard title="Est. DSM Charge" value={`₹${s.total_penalty_cost.toLocaleString()}`} color="red" subtitle="Cumulative day" />
+          {/* data-source coverage strip */}
+          <div className="flex flex-wrap items-center gap-2 mb-5 text-xs">
+            <span className="text-white/40">Sources:</span>
+            {(pred.data_sources || []).map((d: string) => (
+              <span key={d} className="badge badge-blue">{d}</span>
+            ))}
+            <span className={`badge ${pred.weather_mode === "synthetic" ? "badge-orange" : "badge-green"}`}>
+              weather: {pred.weather_mode}
+            </span>
+            <span className="badge badge-blue">mode: {pred.forecast_mode}</span>
+            {pred.model_version && <span className="badge badge-blue">model {pred.model_version}</span>}
           </div>
 
-          {/* Top visual row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <MetricCard title="Predicted (now)" value={pred.predicted_generation_mw.toFixed(2)} unit="MW" color="blue" subtitle={`${genPct.toFixed(0)}% of capacity`} />
+            <MetricCard title="Scheduled" value={pred.scheduled_generation_mw.toFixed(2)} unit="MW" color="purple" subtitle="clear-sky / declared" />
+            <MetricCard title="Deviation" value={`${pred.deviation_percent}%`} color={penalty ? "red" : "green"} subtitle={pred.deviation_direction} />
+            <MetricCard title="Est. DSM Charge" value={`₹${(pred.estimated_dsm_charge || 0).toLocaleString()}`} color={penalty ? "red" : "green"} subtitle={pred.dsm_band || "within band"} />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="glass-card p-4 flex flex-col items-center justify-center glass-hover">
-              <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Peak Generation</div>
-              <SolarPanel3D generation={genPct} className="w-full max-w-[220px] animate-float" />
-              <div className="text-2xl font-bold text-white mt-2">{peak.predicted_generation_mw.toFixed(1)} <span className="text-base text-white/40">MW</span></div>
-              <div className="text-[11px] text-white/35">at {peak.timestamp.slice(11, 16)} · GHI {peak.ghi_w_m2.toFixed(0)} W/m²</div>
+              <div className="eyebrow mb-2">Generation Now</div>
+              <SolarPanel3D generation={genPct} className="w-full max-w-[200px] animate-float" />
+              <div className="text-2xl font-bold text-white mt-2">{pred.predicted_generation_mw.toFixed(1)} <span className="text-base text-white/40">MW</span></div>
+              <div className="text-[11px] text-white/35">GHI {pred.ghi_w_m2?.toFixed(0)} W/m² · cloud {pred.cloud_cover_percent?.toFixed(0)}%</div>
+            </div>
+
+            <div className="glass-card p-4 flex flex-col items-center justify-center glass-hover">
+              <div className="eyebrow mb-2">Fuzzy Risk</div>
+              <RiskGauge3D score={pred.fuzzy_risk_score} level={pred.fuzzy_risk_level} className="w-full max-w-[180px]" />
+              <div className="text-[11px] text-white/35 mt-1">confidence {(pred.confidence_score * 100).toFixed(0)}%</div>
             </div>
 
             <div className="glass-card p-5 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Forecast Confidence (peak)</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full" style={{ width: `${peak.confidence_score * 100}%` }} />
-                    </div>
-                    <span className="text-sm font-bold text-cyan-300">{(peak.confidence_score * 100).toFixed(0)}%</span>
+              <div>
+                <div className="eyebrow mb-1">Penalty Status</div>
+                <div className={`text-2xl font-bold ${penalty ? "text-red-400" : "text-emerald-400"}`}>{pred.penalty_status}</div>
+                <div className="text-sm text-white/40 mt-1">Profile: {pred.dsm_profile}</div>
+                <div className="text-xs text-white/30 mt-0.5">{pred.rule_source?.status}</div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/5">
+                <div className="eyebrow mb-1">Nearest Substation</div>
+                {pred.nearest_substation ? (
+                  <div className="text-sm text-white/70">
+                    {pred.nearest_substation.name}
+                    <span className="text-white/40"> · {pred.nearest_substation.distance_km} km · {pred.nearest_substation.source}</span>
                   </div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Max Deviation</div>
-                  <div className="text-2xl font-bold text-white mt-1">{s.max_deviation_percent.toFixed(1)}<span className="text-base text-white/40">%</span></div>
-                </div>
-                <div className="pt-3 border-t border-white/5">
-                  <div className={`text-xl font-bold ${s.penalty_intervals > 0 ? "text-red-400" : "text-emerald-400"}`}>
-                    {s.penalty_intervals > 0 ? "PENALTY RISK" : "WITHIN BAND"}
-                  </div>
-                  <div className="text-sm text-white/40 mt-1">Provider: {data.provider}</div>
-                </div>
+                ) : (
+                  <div className="text-sm text-white/40">None imported — see Locations.</div>
+                )}
               </div>
             </div>
+          </div>
 
-            <div className="glass-card p-4 flex flex-col items-center justify-center glass-hover">
-              <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Worst-hour DSM Risk</div>
-              <RiskGauge3D score={worst.risk_score} level={worst.risk_level} className="w-full max-w-[180px]" />
-              <div className="text-[11px] text-white/35 mt-1">at {worst.timestamp.slice(11, 16)}</div>
+          <div className="glass-card p-5 mb-6">
+            <div className="eyebrow mb-2">Explanation</div>
+            <p className="text-white/70 text-sm leading-relaxed">{pred.explanation}</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {(pred.sources || []).map((s: any) => (
+                <a key={s.id} href={s.reference} target="_blank" rel="noreferrer"
+                  className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 text-white/50 hover:text-cyan-300 hover:border-cyan-500/30">
+                  {s.name} ({s.classification})
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Energy Flow at peak */}
-          <div className="glass-card p-5 mb-6">
-            <div className="text-[10px] text-white/40 uppercase tracking-wider mb-3">Peak-hour Energy Flow</div>
-            <EnergyFlow3D
-              predictedMW={peak.predicted_generation_mw}
-              scheduledMW={peak.scheduled_generation_mw}
-              capacityMW={form.capacity_mw}
-              isPenalty={peak.penalty_status === "PENALTY_RISK"}
-              className="w-full"
-            />
-          </div>
-
-          {/* Timeline */}
           {timeline.length > 0 && <MiniTimeline data={timeline} maxMW={form.capacity_mw} />}
         </>
       )}
 
-      {!data && !loading && (
-        <div className="glass-card text-center py-20">
-          <SolarPanel3D generation={0} className="w-48 mx-auto mb-6 opacity-50" />
+      {online && !pred && !loading && (
+        <div className="glass-card text-center py-16">
+          <SolarPanel3D generation={0} className="w-40 mx-auto mb-6 opacity-50" />
           <h3 className="text-lg font-medium text-white/60">Ready to Forecast</h3>
-          <p className="text-white/30 mt-1 text-sm">Pick a site and run a live forecast from real weather data</p>
+          <p className="text-white/30 mt-1 text-sm">Pick a site and run a full real-data prediction.</p>
         </div>
       )}
-    </div>
-  );
-}
-
-function Field({ label, unit, value, onChange }: { label: string; unit: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div>
-      <label className="text-[10px] text-white/40 block mb-1 uppercase tracking-wider">{label} <span className="text-white/20">({unit})</span></label>
-      <input
-        type="number" step="any" className="input-field"
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-      />
     </div>
   );
 }

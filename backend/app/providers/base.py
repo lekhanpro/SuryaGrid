@@ -17,6 +17,8 @@ class WeatherPoint:
     """A single hourly weather/irradiance observation or forecast.
 
     Irradiance components are in W/m^2, the inputs pvlib needs for transposition.
+    The trailing fields (humidity/pressure/precipitation) are optional so ML feature
+    sets align between the Kaggle-trained model and live weather; defaults are 0.
     """
 
     timestamp: datetime  # timezone-aware, in the site's local timezone
@@ -26,6 +28,10 @@ class WeatherPoint:
     temperature_c: float  # air temperature at 2m
     cloud_cover_percent: float  # total cloud cover
     wind_speed_mps: float  # wind speed at 10m
+    humidity_percent: float = 0.0  # relative humidity at 2m
+    pressure_hpa: float = 0.0  # surface pressure
+    precipitation_probability_percent: float = 0.0  # precipitation probability
+    weather_code: int = 0  # WMO weather code
 
 
 class WeatherProvider(ABC):

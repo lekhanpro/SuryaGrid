@@ -76,6 +76,8 @@ jobs:
         run: npm ci
 
       - name: Build (includes type checking)
+        env:
+          STATIC_EXPORT: "true"
         run: npm run build
 
       - name: Validate static export artifact

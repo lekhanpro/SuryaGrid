@@ -1,0 +1,2 @@
+# Built augmented datasets (augmented_dataset.csv) are written here by
+# app/ml/dataset_builder.py. See docs/ML_PIPELINE.md.

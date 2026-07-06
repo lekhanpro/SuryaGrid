@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "region": "Bengaluru, Karnataka, India",
+    "escom": "BESCOM",
+    "state_regulator": "KERC (Karnataka Electricity Regulatory Commission)",
+    "central_regulator": "CERC (Central Electricity Regulatory Commission)",
+    "generated_phase": "1.7",
+    "recommendation_mode": "framework_only",
+    "emits_rupee_values": false,
+    "overall_status": "NEEDS_OFFICIAL_TARIFF_SOURCE"
+  },
+  "regulatory_framework": {
+    "central": {
+      "authority": "CERC",
+      "regulation": "CERC (Deviation Settlement Mechanism and Related Matters) Regulations, 2024",
+      "replaces": "CERC DSM Regulations, 2022",
+      "source_url": "https://cercind.gov.in/",
+      "verified_notes": [
+        "Deviation for a seller = actual injection minus scheduled generation per time block.",
+        "2024 DSM charges are linked to time-block market prices, not a fixed rupee/MWh figure.",
+        "CERC issued an order (2026) determining the value of 'X' for deviation computation for wind/solar sellers.",
+        "Some 2024 provisions were stayed by the Karnataka High Court on an NSEFI petition (2026)."
+      ],
+      "status": "REFERENCE_VERIFIED_RATES_PENDING"
+    },
+    "state": {
+      "authority": "KERC",
+      "regulation": "KERC (Forecasting, Scheduling, Deviation Settlement Mechanism and related matters for Sellers of Wind, Solar and WS-Hybrid Generation Sources) Regulations",
+      "known_versions": ["2015 (original)", "2026 (final, updated framework)"],
+      "source_urls": [
+        "https://kerc.karnataka.gov.in/info-3/Regulations/en",
+        "http://prms.karnataka.gov.in/kercold/Pages/Regulations-under-Electricity-Act-2003.aspx"
+      ],
+      "status": "REFERENCE_VERIFIED_RATES_PENDING"
+    }
+  },
+  "deviation_bands": {
+    "band_definition_percent": 15.0,
+    "band_source_label": "FALLBACK_DEFAULT",
+    "band_note": "The +/-15% band is a MODELLING parameter used to label dsm_agent_training.parquet and to structure recommendations. It is NOT an official KERC/CERC deviation percentage. The official solar 'X' band must be read from the current CERC/KERC order.",
+    "bands": ["WITHIN_BAND", "OVER_INJECTION", "UNDER_INJECTION"],
+    "official_solar_x_percent": null,
+    "official_x_status": "NEEDS_OFFICIAL_TARIFF_SOURCE"
+  },
+  "dsm_charges": {
+    "currency": "INR",
+    "penalty_rate_per_mwh": null,
+    "penalty_rate_per_kwh": null,
+    "computation_method": "market_price_linked_per_CERC_DSM_2024",
+    "status": "NEEDS_OFFICIAL_TARIFF_SOURCE",
+    "reason": "CERC DSM 2024 charges are linked to time-block market clearing prices and are under active amendment/litigation. No fixed rupee value is hardcoded. The app returns framework-only DSM recommendations (deviation band + direction) and does not compute rupee penalties until an official, current rate source is connected."
+  },
+  "bescom_retail_tariff": {
+    "regulator": "KERC",
+    "escom": "BESCOM",
+    "energy_charge_inr_per_kwh": null,
+    "fixed_charge_inr": null,
+    "source_url": "https://kerc.karnataka.gov.in/ (Tariff Orders)",
+    "status": "NEEDS_OFFICIAL_TARIFF_SOURCE",
+    "reason": "Retail slab rates change per annual KERC tariff order; not hardcoded to avoid stale/incorrect rupee values."
+  }
+}

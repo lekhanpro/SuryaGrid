@@ -1,0 +1,81 @@
+{
+  "model_name": "load_forecast_model",
+  "model_version": "20260706154406",
+  "training_data_files": [
+    "karnataka_or_india_load_history.parquet",
+    "load_agent_training.parquet"
+  ],
+  "training_data_sources": [
+    {
+      "name": "National-Level Electricity Load Curve Data (India) - Kaggle",
+      "dataset": "smarthkaushal/energy-demand-profile",
+      "url": "https://www.kaggle.com/datasets/smarthkaushal/energy-demand-profile",
+      "label": "REAL_INDIA",
+      "geography": "India (national aggregate)",
+      "measure": "Hourly Demand Met (MW)"
+    }
+  ],
+  "training_geography": "India (national aggregate demand)",
+  "target_geography": "Bengaluru, Karnataka, India",
+  "local_data_available": false,
+  "domain_shift_risk": "HIGH",
+  "features": [
+    "hour_sin",
+    "hour_cos",
+    "dow_sin",
+    "dow_cos",
+    "doy_sin",
+    "doy_cos",
+    "is_weekend",
+    "lag_24h",
+    "lag_168h",
+    "roll_24h_mean"
+  ],
+  "target": "load_value",
+  "train_rows": 9196,
+  "test_rows": 2300,
+  "train_test_split_method": "chronological_80_20",
+  "metrics": {
+    "chosen_model": "hist_gradient_boosting",
+    "mae": 4629.4623,
+    "rmse": 6259.5023,
+    "mape_percent": 2.549,
+    "r2": 0.883,
+    "candidates": {
+      "random_forest": {
+        "mae": 4632.878,
+        "rmse": 6326.9379,
+        "mape_percent": 2.541,
+        "r2": 0.8804
+      },
+      "hist_gradient_boosting": {
+        "mae": 4629.4623,
+        "rmse": 6259.5023,
+        "mape_percent": 2.549,
+        "r2": 0.883
+      }
+    }
+  },
+  "limitations": [
+    "Trained on India NATIONAL hourly demand, not Bengaluru/Karnataka load.",
+    "National aggregate demand shape differs strongly from a city/feeder profile (domain shift HIGH). Do not use for Bengaluru DSM/settlement decisions.",
+    "No metered BESCOM/KPTCL feeder load was available; connect it to make this local."
+  ],
+  "production_ready": false,
+  "reason_if_not_production_ready": "INSUFFICIENT_LOCAL_LOAD_DATA: model trained on REAL_INDIA national demand (India (national)), not Bengaluru/Karnataka feeder load. High domain shift; usable as an India-level baseline / pretraining only.",
+  "uses_synthetic_data": false,
+  "synthetic_percentage": 0.0,
+  "uses_non_local_data": false,
+  "non_local_data_percentage": 0.0,
+  "data_mode": "real",
+  "source_status": [
+    "REAL_INDIA"
+  ],
+  "prediction_type": "load_forecast",
+  "model_type": "hist_gradient_boosting",
+  "created_at": "2026-07-06T15:44:06.216623+00:00",
+  "notes": [
+    "source_scope=India (national); source_label=REAL_INDIA.",
+    "REAL_INDIA (national) is not foreign, but is NOT Bengaluru-local -> local_data_available=false, domain_shift_risk=HIGH."
+  ]
+}

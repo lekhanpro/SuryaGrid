@@ -10,11 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     Consumer,
     Forecast,
+    Location,
     Owner,
     Reading,
     Settlement,
     Site,
+    SiteSubstationMap,
+    Substation,
     TrainingRun,
+    WeatherProviderLocation,
 )
 
 
@@ -185,3 +189,121 @@ async def counts(db: AsyncSession) -> dict:
         result = await db.execute(select(func.count()).select_from(model))
         out[label] = int(result.scalar() or 0)
     return out
+
+
+# ----- Substations -----
+async def create_substations(db: AsyncSession, records: list[dict]) -> int:
+    """Insert substations, skipping duplicates by osm_id (when present)."""
+    existing_osm = set()
+    result = await db.execute(select(Substation.osm_id).where(Substation.osm_id.isnot(None)))
+    existing_osm = {r for (r,) in result.all()}
+
+    objs = []
+    seen_osm: set[str] = set()
+    for r in records:
+        osm_id = r.get("osm_id")
+        if osm_id is not None:
+            osm_id = str(osm_id)
+            if osm_id in existing_osm or osm_id in seen_osm:
+                continue
+            seen_osm.add(osm_id)
+        objs.append(
+            Substation(
+                name=r.get("name") or "Unnamed substation",
+                voltage_level=r.get("voltage_level"),
+                operator=r.get("operator"),
+                latitude=r["latitude"],
+                longitude=r["longitude"],
+                district=r.get("district"),
+                state=r.get("state"),
+                country=r.get("country"),
+                source_name=r.get("source_name") or "unknown",
+                source_url=r.get("source_url"),
+                source_confidence=r.get("source_confidence", 0.6),
+                osm_id=osm_id,
+            )
+        )
+    db.add_all(objs)
+    await db.commit()
+    return len(objs)
+
+
+async def list_substations(db: AsyncSession, limit: int = 500) -> list[Substation]:
+    result = await db.execute(select(Substation).order_by(Substation.name).limit(limit))
+    return list(result.scalars().all())
+
+
+async def count_substations(db: AsyncSession) -> int:
+    result = await db.execute(select(func.count()).select_from(Substation))
+    return int(result.scalar() or 0)
+
+
+async def nearest_substation(db: AsyncSession, latitude: float, longitude: float):
+    """Return (Substation, distance_km) nearest to a point, or (None, None)."""
+    from app.utils.geo import haversine_km
+
+    result = await db.execute(select(Substation))
+    subs = list(result.scalars().all())
+    if not subs:
+        return None, None
+    best, best_d = None, None
+    for s in subs:
+        d = haversine_km(latitude, longitude, s.latitude, s.longitude)
+        if best_d is None or d < best_d:
+            best, best_d = s, d
+    return best, best_d
+
+
+async def upsert_site_substation(
+    db: AsyncSession, site_id: uuid.UUID, substation_id: uuid.UUID, distance_km: float
+) -> SiteSubstationMap:
+    await db.execute(delete(SiteSubstationMap).where(SiteSubstationMap.site_id == site_id))
+    mapping = SiteSubstationMap(
+        site_id=site_id, substation_id=substation_id, distance_km=distance_km
+    )
+    db.add(mapping)
+    await db.commit()
+    await db.refresh(mapping)
+    return mapping
+
+
+# ----- Locations -----
+async def create_location(db: AsyncSession, data: dict) -> Location:
+    loc = Location(
+        name=data["name"],
+        location_type=data.get("location_type", "site"),
+        latitude=data["latitude"],
+        longitude=data["longitude"],
+        source_name=data.get("source_name"),
+        source_confidence=data.get("source_confidence", 1.0),
+    )
+    db.add(loc)
+    await db.commit()
+    await db.refresh(loc)
+    return loc
+
+
+async def list_locations(db: AsyncSession, limit: int = 500) -> list[Location]:
+    result = await db.execute(select(Location).order_by(Location.name).limit(limit))
+    return list(result.scalars().all())
+
+
+# ----- Weather provider locations -----
+async def create_weather_provider_location(db: AsyncSession, data: dict) -> WeatherProviderLocation:
+    loc = WeatherProviderLocation(
+        provider=data.get("provider", "open-meteo"),
+        label=data.get("label"),
+        latitude=data["latitude"],
+        longitude=data["longitude"],
+    )
+    db.add(loc)
+    await db.commit()
+    await db.refresh(loc)
+    return loc
+
+
+async def list_weather_provider_locations(
+    db: AsyncSession, limit: int = 500
+) -> list[WeatherProviderLocation]:
+    result = await db.execute(select(WeatherProviderLocation).limit(limit))
+    return list(result.scalars().all())

@@ -1,0 +1,54 @@
+{
+  "model_name": "rl_policy",
+  "model_version": "20260706154406",
+  "training_data_files": [
+    "bengaluru_weather_solar_history.parquet"
+  ],
+  "training_data_sources": [
+    {
+      "name": "Open-Meteo Bengaluru weather (environment state, partial)",
+      "label": "REAL_COORDINATE_BASED"
+    },
+    {
+      "name": "Official DSM/tariff rupee reward terms",
+      "label": "NEEDS_OFFICIAL_SOURCE",
+      "status": "absent"
+    }
+  ],
+  "training_geography": "Bengaluru, Karnataka, India",
+  "target_geography": "Bengaluru, Karnataka, India",
+  "local_data_available": false,
+  "domain_shift_risk": "HIGH",
+  "features": [
+    "solar_state",
+    "load_state",
+    "tariff_reward(missing)"
+  ],
+  "target": "dsm_dispatch_policy",
+  "train_rows": 0,
+  "test_rows": 0,
+  "train_test_split_method": "n/a (not trained)",
+  "metrics": {},
+  "limitations": [
+    "No RL policy trained: reward requires official rupee DSM/tariff terms + real local load.",
+    "Training a policy on fabricated rewards would produce misleading dispatch actions."
+  ],
+  "production_ready": false,
+  "reason_if_not_production_ready": "INSUFFICIENT_REAL_ENVIRONMENT_DATA: missing real_local_load, official_tariff_rupee_reward. An RL reward requires official DSM/tariff rupee terms and real local load; these are pending (NEEDS_OFFICIAL_TARIFF_SOURCE) / not local. Refusing to synthesise a reward environment or a fake policy.",
+  "uses_synthetic_data": false,
+  "synthetic_percentage": 0.0,
+  "uses_non_local_data": false,
+  "non_local_data_percentage": 0.0,
+  "data_mode": "real",
+  "source_status": [
+    "REAL_COORDINATE_BASED",
+    "NEEDS_OFFICIAL_SOURCE"
+  ],
+  "prediction_type": "rl_dispatch_policy",
+  "model_type": "none",
+  "created_at": "2026-07-06T15:44:06.251296+00:00",
+  "notes": [
+    "preconditions={'real_bengaluru_weather': True, 'real_local_load': False, 'official_tariff_rupee_reward': False}",
+    "policy_zip_written=false"
+  ]
+}

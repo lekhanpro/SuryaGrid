@@ -31,3 +31,36 @@ tectonic_bin/
 *.db
 *.sqlite
 *.sqlite3
+
+
+# Generated ML artifacts & ingested datasets (keep .gitkeep placeholders)
+backend/data/processed/*.csv
+backend/data/raw/kaggle/*.csv
+backend/data/raw/substations/*.csv
+backend/models/*.joblib
+backend/models/*.json
+# Kaggle credentials must never be committed
+kaggle.json
+**/kaggle.json
+
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.playwright-mcp/
+
+# Phase 1.7 ML artifacts — large and/or from licensed sources; NOT committed.
+# Reproduce exactly with:
+#   cd backend
+#   python -m app.ml.build_ml_datasets --region bengaluru --data-mode real
+#   python -m app.ml.train_all_agents  --region bengaluru --data-mode real
+# Model cards (backend/models/metadata/*.json), the rules engine, the tariff JSON,
+# and the build manifest ARE committed as the evidence/provenance of the real run.
+backend/data/ml/*.parquet
+backend/data/raw/
+backend/models/trained/*.pkl
+backend/models/trained/*.zip
+
+# Stray local files (not project deliverables)
+IMG-*.jpg
+kill3000.ps1

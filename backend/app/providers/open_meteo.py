@@ -21,11 +21,15 @@ _ARCHIVE_ENDPOINT = "https://archive-api.open-meteo.com/v1/archive"
 
 _HOURLY_FIELDS = [
     "temperature_2m",
+    "relative_humidity_2m",
     "cloud_cover",
     "shortwave_radiation",  # GHI
     "direct_normal_irradiance",  # DNI
     "diffuse_radiation",  # DHI
     "wind_speed_10m",
+    "surface_pressure",
+    "precipitation_probability",
+    "weather_code",
 ]
 
 
@@ -79,8 +83,9 @@ class OpenMeteoProvider(WeatherProvider):
         params = {
             "latitude": latitude,
             "longitude": longitude,
-            "current": "temperature_2m,cloud_cover,shortwave_radiation,"
-            "direct_normal_irradiance,diffuse_radiation,wind_speed_10m",
+            "current": "temperature_2m,relative_humidity_2m,cloud_cover,shortwave_radiation,"
+            "direct_normal_irradiance,diffuse_radiation,wind_speed_10m,surface_pressure,"
+            "precipitation,weather_code",
             "timezone": timezone,
         }
         try:
@@ -101,6 +106,10 @@ class OpenMeteoProvider(WeatherProvider):
             "temperature_c": _f(cur.get("temperature_2m")),
             "cloud_cover_percent": _f(cur.get("cloud_cover")),
             "wind_speed_mps": _f(cur.get("wind_speed_10m")),
+            "humidity_percent": _f(cur.get("relative_humidity_2m")),
+            "pressure_hpa": _f(cur.get("surface_pressure")),
+            "precipitation_probability_percent": _f(cur.get("precipitation")),
+            "weather_code": int(_f(cur.get("weather_code"))),
         }
 
     async def fetch_archive(
@@ -154,6 +163,10 @@ class OpenMeteoProvider(WeatherProvider):
         dni = col("direct_normal_irradiance")
         dhi = col("diffuse_radiation")
         wind = col("wind_speed_10m")
+        humidity = col("relative_humidity_2m")
+        pressure = col("surface_pressure")
+        precip = col("precipitation_probability")
+        wcode = col("weather_code")
 
         points: list[WeatherPoint] = []
         for i, t in enumerate(times):
@@ -167,6 +180,10 @@ class OpenMeteoProvider(WeatherProvider):
                     temperature_c=_f(temp[i]),
                     cloud_cover_percent=_f(cloud[i]),
                     wind_speed_mps=_f(wind[i]),
+                    humidity_percent=_f(humidity[i]),
+                    pressure_hpa=_f(pressure[i]),
+                    precipitation_probability_percent=_f(precip[i]),
+                    weather_code=int(_f(wcode[i])),
                 )
             )
         return points
