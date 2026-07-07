@@ -1,0 +1,76 @@
+% References for the SuryaGrid AI current-implementation report.
+% Only sources actually used/wired in the repository or cited in existing repo docs.
+
+@misc{openmeteo,
+  title        = {Open-Meteo Free Weather API (Forecast and Historical Archive/ERA5)},
+  howpublished = {\url{https://open-meteo.com/en/docs}},
+  note         = {CC BY 4.0; historical archive endpoint archive-api.open-meteo.com. Accessed 2026-07.}
+}
+
+@misc{nasapower,
+  title        = {NASA POWER (Prediction Of Worldwide Energy Resources)},
+  howpublished = {\url{https://power.larc.nasa.gov/}},
+  note         = {Solar/meteorological point API (daily and hourly). Accessed 2026-07.}
+}
+
+@misc{osmoverpass,
+  title        = {OpenStreetMap Overpass API (\texttt{power=substation})},
+  howpublished = {\url{https://overpass-api.de/api/interpreter}},
+  note         = {Data (C) OpenStreetMap contributors, ODbL 1.0. Accessed 2026-07.}
+}
+
+@misc{pvlib,
+  title        = {pvlib-python: photovoltaic modelling (Erbs, Ineichen, Faiman, PVWatts)},
+  howpublished = {\url{https://pvlib-python.readthedocs.io/}},
+  note         = {BSD-3-Clause.}
+}
+
+@misc{sklearn,
+  title        = {scikit-learn: Machine Learning in Python},
+  howpublished = {\url{https://scikit-learn.org/}},
+  note         = {RandomForest, HistGradientBoosting estimators used.}
+}
+
+@misc{fastapi,
+  title        = {FastAPI web framework},
+  howpublished = {\url{https://fastapi.tiangolo.com/}}
+}
+
+@misc{nextjs,
+  title        = {Next.js React framework (v14)},
+  howpublished = {\url{https://nextjs.org/}}
+}
+
+@misc{kaggleload,
+  title        = {National-Level Electricity Load Curve Data (India)},
+  author       = {{smarthkaushal}},
+  howpublished = {\url{https://www.kaggle.com/datasets/smarthkaushal/energy-demand-profile}},
+  note         = {Kaggle dataset; ``Hourly Demand Met (MW)'', India national aggregate.}
+}
+
+@misc{kagglehiseas,
+  title        = {Solar Radiation Prediction (NASA HI-SEAS)},
+  author       = {{dronio}},
+  howpublished = {\url{https://www.kaggle.com/datasets/dronio/SolarEnergy}},
+  note         = {Hawaii HI-SEAS; irradiance target. Registered as REAL\_NON\_LOCAL / pretraining only.}
+}
+
+@misc{cercdsm2024,
+  title        = {CERC (Deviation Settlement Mechanism and Related Matters) Regulations, 2024},
+  author       = {{Central Electricity Regulatory Commission, India}},
+  howpublished = {\url{https://cercind.gov.in/}},
+  note         = {Framework verified; exact ``X''/rates set by CERC order (pending).}
+}
+
+@misc{kercdsm,
+  title        = {KERC Forecasting, Scheduling and Deviation Settlement Mechanism framework (Karnataka)},
+  author       = {{Karnataka Electricity Regulatory Commission}},
+  howpublished = {\url{https://kerc.karnataka.gov.in/}},
+  note         = {Framework verified; exact current tariff/slab order pending.}
+}
+
+@misc{kptclsldc,
+  title        = {KPTCL State Load Despatch Centre (Karnataka)},
+  howpublished = {\url{https://kptclsldc.in/}},
+  note         = {Real-time load despatch/SCADA/energy accounting portal; no clean public API. Not wired.}
+}

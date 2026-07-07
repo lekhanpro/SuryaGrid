@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_agents import router as agents_router
+from app.api.routes_kaggle import router as kaggle_router
 from app.api.routes_dsm import router as dsm_router
 from app.api.routes_energy import router as energy_router
 from app.api.routes_forecast import router as forecast_router
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(forecast_router, prefix="/api/v1", tags=["forecast"])
     app.include_router(ml_router, prefix="/api/v1", tags=["ml"])
     app.include_router(agents_router, prefix="/api/v1", tags=["agents"])
+    app.include_router(kaggle_router, prefix="/api/v1", tags=["kaggle"])
     app.include_router(timeline_router, prefix="/api/v1", tags=["timeline"])
     app.include_router(energy_router, prefix="/api/v1", tags=["energy"])
     app.include_router(settlement_router, prefix="/api/v1", tags=["settlement"])

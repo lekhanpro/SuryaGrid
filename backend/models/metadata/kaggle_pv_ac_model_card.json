@@ -1,0 +1,57 @@
+{
+  "model_name": "kaggle_pv_ac_model",
+  "model_version": "20260707103543",
+  "training_data_files": [
+    "kaggle_pv_ac_training.parquet",
+    "kaggle_pv_generation_processed.parquet"
+  ],
+  "training_data_sources": [
+    {
+      "name": "Kaggle: anikannal/solar-power-generation-data",
+      "url": "https://www.kaggle.com/datasets/anikannal/solar-power-generation-data",
+      "label": "REAL_INDIA",
+      "geography": "India (2 plants, site unspecified)"
+    }
+  ],
+  "training_geography": "India (plant-level, unspecified site)",
+  "target_geography": "Bengaluru, Karnataka, India",
+  "local_data_available": false,
+  "domain_shift_risk": "MEDIUM",
+  "features": [
+    "irradiation",
+    "ambient_temperature_c",
+    "module_temperature_c",
+    "hour_sin",
+    "hour_cos"
+  ],
+  "target": "ac_power",
+  "train_rows": 109177,
+  "test_rows": 27295,
+  "train_test_split_method": "chronological_80_20",
+  "metrics": {
+    "chosen_model": "hist_gradient_boosting",
+    "mae": 37.781,
+    "rmse": 118.976,
+    "mape_percent": 15.571,
+    "r2": 0.8688
+  },
+  "limitations": [
+    "Real Indian PV plant data but NOT Bengaluru-local; 34-day window (May-Jun 2020), 2 plants.",
+    "IRRADIATION is a normalised sensor value (not W/m2); AC target is per-inverter kW.",
+    "Plant_1 DC_POWER has a ~10x scaling anomaly; AC power (modelled here) is unaffected."
+  ],
+  "production_ready": false,
+  "reason_if_not_production_ready": "REAL_INDIA plant-specific, short 34-day window, not validated for a Bengaluru site (domain shift). Usable as a real PV AC baseline / pretraining.",
+  "uses_synthetic_data": false,
+  "synthetic_percentage": 0.0,
+  "uses_non_local_data": false,
+  "non_local_data_percentage": 0.0,
+  "data_mode": "real",
+  "source_status": [
+    "REAL_INDIA"
+  ],
+  "prediction_type": "pv_ac_power",
+  "model_type": "hist_gradient_boosting",
+  "created_at": "2026-07-07T10:35:43.187768+00:00",
+  "notes": []
+}

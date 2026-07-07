@@ -64,3 +64,7 @@ backend/models/trained/*.zip
 # Stray local files (not project deliverables)
 IMG-*.jpg
 kill3000.ps1
+
+
+# Processed Kaggle datasets (reproducible via app.data_pipeline.ingest_kaggle_*)
+backend/data/processed/kaggle/*.parquet
