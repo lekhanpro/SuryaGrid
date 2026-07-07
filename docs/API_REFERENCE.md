@@ -52,12 +52,29 @@ Errors return `success:false` with `error_code` and HTTP 4xx/5xx.
 | POST | `/dsm/advanced-check` | Advanced rule-profile deviation + charge + source. |
 | POST | `/dsm/karnataka/{site_id}` | KERC/BESCOM day settlement. |
 
+## Substation-driven agent workflow
+A selected substation becomes the central context object flowing through
+weather → solar → cloud → generation → DSM. Every response carries an `agent_trace` +
+`calculation_trace` and honest provenance; missing real fields stay `null`.
+See [SUBSTATION_DRIVEN_AGENT_WORKFLOW.md](SUBSTATION_DRIVEN_AGENT_WORKFLOW.md).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/substations/catalog?limit=` | Dropdown-ready list (`substation_id`, `display_label`, coords, `voltage_kv`, `reliability_score`), sorted by reliability. |
+| GET | `/substations/{substation_id}` | Full `SubstationContext` (404 if unknown). `capacity_mva`/`district` are always `null` (unavailable in OSM, never fabricated). |
+| POST | `/orchestrate/substation` | Run the full workflow; returns substation, agent_trace, calculation_trace, generation timeline, DSM forecast, data_sources, limitations. |
+| POST | `/dsm/forecast` | Substation-context DSM forecast (framework-only, `emits_rupee_values=false`; blocks capacity/load/tariff calcs that have no real source). See [DSM_SUBSTATION_INPUT_TRACE.md](DSM_SUBSTATION_INPUT_TRACE.md). |
+| GET | `/generation/timeline?substation_id=&site_capacity_mw=&forecast_horizon_hours=&allow_estimated=&use_live_weather=` | Generation timeline (ESTIMATED from irradiance); `allow_estimated=false` suppresses the estimate and shows real irradiance only. |
+
+Body for `POST /orchestrate/substation` and `/dsm/forecast`:
+`{substation_id, site_capacity_mw?, scheduled_generation_mw?, forecast_horizon_hours=6, use_live_weather=true, site_latitude?, site_longitude?}`.
+
 ## Existing extras (Phase 1)
 `/energy/{id}`, `/settle`, `/settle/day/{id}`, `/settlements/{id}`, `/rl/rates`,
 `/rl/runs`, `/rl/train`, `/consumption/profiles`, `/karnataka/seed`, `/karnataka/regions`,
 `/bescom/status`, `/weather/current/{id}`, `/ingest/current/{id}`.
 
-**Total: 49 endpoints.**
+**Total: 61 endpoints** (`/api/v1`), including the substation-driven workflow.
 
 ---
 

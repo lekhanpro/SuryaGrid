@@ -9,6 +9,7 @@ import {
   probeBackend,
 } from "@/lib/api";
 import OfflineBanner from "@/components/OfflineBanner";
+import SubstationWorkflowPanel from "@/components/SubstationWorkflowPanel";
 
 function Cov({ ok, label }: { ok: boolean; label: string }) {
   return (
@@ -79,6 +80,8 @@ export default function LocationsPage() {
 
       {online === false && <OfflineBanner base={API_BASE} />}
       {online === null && <div className="glass-card p-6 text-white/50">Checking backend…</div>}
+
+      {online && <SubstationWorkflowPanel />}
 
       {avail && (
         <>

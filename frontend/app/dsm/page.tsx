@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { advancedDsmCheck, API_BASE, getRuleProfiles, probeBackend } from "@/lib/api";
 import OfflineBanner from "@/components/OfflineBanner";
+import SubstationWorkflowPanel from "@/components/SubstationWorkflowPanel";
 
 function StatusChip({ status }: { status: string }) {
   const official = status === "OFFICIAL_SOURCE";
@@ -67,6 +68,7 @@ export default function DSMPage() {
 
       {online && (
         <>
+          <SubstationWorkflowPanel />
           {/* Advanced check */}
           <div className="glass-card p-5 mb-6">
             <div className="text-sm font-bold text-white/70 uppercase tracking-wider mb-4">Advanced DSM Check</div>

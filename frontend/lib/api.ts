@@ -270,3 +270,56 @@ export async function agentDsmAssess(body: Record<string, any>) {
     body: JSON.stringify(body),
   });
 }
+
+
+// ---- Substation-driven agent workflow ----
+// A selected substation becomes the central context object flowing through
+// weather -> solar -> cloud -> generation timeline -> DSM. Every response carries
+// agent_trace + calculation_trace + provenance; missing real fields stay null
+// (capacity_mva/district are unavailable in OSM and are never fabricated).
+export async function getSubstationCatalog(limit = 1000) {
+  return apiFetch<any>(`/substations/catalog${qs({ limit })}`);
+}
+export async function getSubstationContext(
+  substationId: string,
+  params?: Record<string, string | number>
+) {
+  return apiFetch<any>(`/substations/${encodeURIComponent(substationId)}${qs(params)}`);
+}
+export async function orchestrateSubstation(body: {
+  substation_id: string;
+  site_capacity_mw?: number | null;
+  forecast_horizon_hours?: number;
+  scheduled_generation_mw?: number | null;
+  use_live_weather?: boolean;
+  site_latitude?: number | null;
+  site_longitude?: number | null;
+}) {
+  return apiFetch<any>("/orchestrate/substation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+export async function substationDsmForecast(body: {
+  substation_id: string;
+  site_capacity_mw?: number | null;
+  forecast_horizon_hours?: number;
+  scheduled_generation_mw?: number | null;
+  use_live_weather?: boolean;
+}) {
+  return apiFetch<any>("/dsm/forecast", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+export async function getGenerationTimeline(params: {
+  substation_id: string;
+  site_capacity_mw?: number;
+  forecast_horizon_hours?: number;
+  allow_estimated?: boolean;
+  use_live_weather?: boolean;
+}) {
+  return apiFetch<any>(`/generation/timeline${qs(params)}`);
+}

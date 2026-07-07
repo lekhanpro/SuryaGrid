@@ -7,11 +7,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_agents import router as agents_router
-from app.api.routes_kaggle import router as kaggle_router
 from app.api.routes_dsm import router as dsm_router
 from app.api.routes_energy import router as energy_router
 from app.api.routes_forecast import router as forecast_router
 from app.api.routes_health import router as health_router
+from app.api.routes_kaggle import router as kaggle_router
 from app.api.routes_karnataka import router as karnataka_router
 from app.api.routes_locations import router as locations_router
 from app.api.routes_ml import router as ml_router
@@ -20,6 +20,7 @@ from app.api.routes_realtime import router as realtime_router
 from app.api.routes_settlement import router as settlement_router
 from app.api.routes_sites import router as sites_router
 from app.api.routes_sources import router as sources_router
+from app.api.routes_substation_orchestrate import router as substation_workflow_router
 from app.api.routes_system import router as system_router
 from app.api.routes_timeline import router as timeline_router
 from app.api.routes_weather import router as weather_router
@@ -98,6 +99,9 @@ def create_app() -> FastAPI:
     app.include_router(settlement_router, prefix="/api/v1", tags=["settlement"])
     app.include_router(realtime_router, prefix="/api/v1", tags=["realtime"])
     app.include_router(karnataka_router, prefix="/api/v1", tags=["karnataka"])
+    # Substation-driven agent workflow (registered AFTER locations so /substations/catalog
+    # and /substations/{substation_id} resolve without clashing with existing routes).
+    app.include_router(substation_workflow_router, prefix="/api/v1", tags=["substation-workflow"])
 
     return app
 

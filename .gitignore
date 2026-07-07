@@ -57,6 +57,11 @@ kaggle.json
 # Model cards (backend/models/metadata/*.json), the rules engine, the tariff JSON,
 # and the build manifest ARE committed as the evidence/provenance of the real run.
 backend/data/ml/*.parquet
+# ...except the small OSM/ODbL substation catalog + grid features (24 KB / 21 KB).
+# The substation-driven agent workflow needs these to run in the repo / deployment,
+# and they are the committed provenance of the 344 real Bengaluru substations.
+!backend/data/ml/bengaluru_substations_cleaned.parquet
+!backend/data/ml/bengaluru_grid_features.parquet
 backend/data/raw/
 backend/models/trained/*.pkl
 backend/models/trained/*.zip
