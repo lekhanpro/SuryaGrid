@@ -35,20 +35,30 @@ AGENTS = [
 ]
 
 
-def run(region: str, data_mode: str, start_year: int, end_year: int, do_build: bool,
-        allow_build: bool = True) -> dict:
+def run(
+    region: str,
+    data_mode: str,
+    start_year: int,
+    end_year: int,
+    do_build: bool,
+    allow_build: bool = True,
+) -> dict:
     if data_mode not in (prov.DATA_MODE_REAL, prov.DATA_MODE_DEMO):
         raise ValueError("data-mode must be 'real' or 'demo'")
 
     prov.ensure_dirs()
     datasets_present = prov.ml_file_exists(F_WEATHER)
     if allow_build and (do_build or not datasets_present):
-        print(f"[train_all_agents] Building datasets first (present={datasets_present}, "
-              f"do_build={do_build})")
+        print(
+            f"[train_all_agents] Building datasets first (present={datasets_present}, "
+            f"do_build={do_build})"
+        )
         build_all(region, data_mode, start_year, end_year)
     elif not datasets_present:
-        print("[train_all_agents] WARNING: datasets missing and --no-build set; "
-              "agents will skip honestly.")
+        print(
+            "[train_all_agents] WARNING: datasets missing and --no-build set; "
+            "agents will skip honestly."
+        )
     elif data_mode == prov.DATA_MODE_REAL:
         print("[train_all_agents] Using existing real datasets in backend/data/ml/.")
 
@@ -105,8 +115,14 @@ def main(argv: list[str] | None = None) -> int:
 
     do_build = args.build and not args.no_build
     try:
-        run(args.region, args.data_mode, args.start_year, args.end_year, do_build,
-            allow_build=not args.no_build)
+        run(
+            args.region,
+            args.data_mode,
+            args.start_year,
+            args.end_year,
+            do_build,
+            allow_build=not args.no_build,
+        )
     except prov.SyntheticFallbackError as exc:
         print(f"[train_all_agents] REAL-MODE ABORT: {exc}")
         return 2

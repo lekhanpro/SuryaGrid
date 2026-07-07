@@ -68,3 +68,10 @@ kill3000.ps1
 
 # Processed Kaggle datasets (reproducible via app.data_pipeline.ingest_kaggle_*)
 backend/data/processed/kaggle/*.parquet
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.backup
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform.lock.hcl

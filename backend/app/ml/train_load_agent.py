@@ -75,12 +75,16 @@ def train(data_mode: str = "real") -> dict:
 
     train_df = _engineer(hist)
     if len(train_df) < MIN_LOAD_ROWS:
-        return _skip("INSUFFICIENT_LOCAL_LOAD_DATA (too few rows after lag engineering)",
-                     non_local=False, local=is_local)
+        return _skip(
+            "INSUFFICIENT_LOCAL_LOAD_DATA (too few rows after lag engineering)",
+            non_local=False,
+            local=is_local,
+        )
     train_df["source_label"] = src_label
     train_df["region_scope"] = scope
-    prov.write_parquet(train_df[[*FEATURES, TARGET, "timestamp", "source_label", "region_scope"]],
-                       F_LOAD_TRAIN)
+    prov.write_parquet(
+        train_df[[*FEATURES, TARGET, "timestamp", "source_label", "region_scope"]], F_LOAD_TRAIN
+    )
 
     x_tr, x_te, y_tr, y_te, split = tu.chronological_split(
         train_df, FEATURES, TARGET, order_col=ORDER_COL
@@ -168,9 +172,11 @@ def train(data_mode: str = "real") -> dict:
     )
     card_path = card.save(CARD_JSON)
 
-    print(f"[train_load_agent] TRAINED {best_name} on REAL_INDIA national load | "
-          f"R2={best_metrics['r2']} RMSE={best_metrics['rmse']} MW | "
-          f"production_ready={production_ready} (domain shift HIGH)")
+    print(
+        f"[train_load_agent] TRAINED {best_name} on REAL_INDIA national load | "
+        f"R2={best_metrics['r2']} RMSE={best_metrics['rmse']} MW | "
+        f"production_ready={production_ready} (domain shift HIGH)"
+    )
     return {
         "agent": "load",
         "status": "TRAINED_NON_LOCAL",

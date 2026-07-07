@@ -1,0 +1,22 @@
+# ============================================================================
+# SuryaGrid — Terraform variables (example)
+# Copy this to terraform.tfvars and fill in actual values.
+# NEVER commit terraform.tfvars with real secrets.
+# ============================================================================
+
+aws_region  = "ap-south-1"
+environment = "prod"
+
+# Database
+db_password = "CHANGE-ME-strong-password-here"
+
+# Backend image (update after first ECR push)
+# Format: <account_id>.dkr.ecr.ap-south-1.amazonaws.com/suryagrid-backend:latest
+backend_image = "PLACEHOLDER"
+
+# Sizing (defaults are minimal/cheap — scale up for production traffic)
+# db_instance_class     = "db.t4g.small"
+# redis_node_type       = "cache.t4g.small"
+# backend_cpu           = 1024
+# backend_memory        = 2048
+# backend_desired_count = 2

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: suryagrid
       POSTGRES_PASSWORD: suryagrid
@@ -14,6 +14,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    command: >
+      postgres
+        -c shared_buffers=64MB
+        -c effective_cache_size=128MB
+        -c work_mem=4MB
+        -c maintenance_work_mem=32MB
+        -c max_connections=50
 
   redis:
     image: redis:7-alpine
@@ -24,11 +35,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    command: redis-server --maxmemory 48mb --maxmemory-policy allkeys-lru
 
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "8080:8000"
     environment:
       ENVIRONMENT: production
       DATABASE_URL: postgresql+asyncpg://suryagrid:suryagrid@postgres:5432/suryagrid
@@ -37,12 +53,10 @@ services:
       WEATHER_API_BASE_URL: ${WEATHER_API_BASE_URL:-https://api.open-meteo.com/v1/forecast}
       DSM_DEFAULT_REGION: ${DSM_DEFAULT_REGION:-Karnataka}
       DSM_DEFAULT_RULE_PROFILE: ${DSM_DEFAULT_RULE_PROFILE:-kerc-solar}
-      CORS_ORIGINS: '["http://localhost:3000"]'
-      # Kaggle credentials are optional; manual dataset placement works without them.
+      CORS_ORIGINS: '["http://suryagrid.mithungowda.in","http://32.197.42.115:3000","http://localhost:3000"]'
       KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
       KAGGLE_KEY: ${KAGGLE_KEY:-}
     volumes:
-      # Mounted so Kaggle datasets / trained models persist and can be dropped in.
       - ./backend/data:/app/data
       - ./backend/models:/app/models
     depends_on:
@@ -57,14 +71,17 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 768M
 
   frontend:
     build:
       context: ./frontend
       args:
-        # Baked into the client bundle; the browser calls the host-mapped backend port.
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+        NEXT_PUBLIC_API_URL: http://suryagrid.mithungowda.in/api/v1
     ports:
       - "3000:3000"
     depends_on:
@@ -75,6 +92,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   pgdata:
