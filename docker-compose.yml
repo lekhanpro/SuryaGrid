@@ -44,7 +44,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "8080:8000"
     environment:
       ENVIRONMENT: production
       DATABASE_URL: postgresql+asyncpg://suryagrid:suryagrid@postgres:5432/suryagrid
@@ -81,7 +81,7 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://32.197.42.115:8000/api/v1
+        NEXT_PUBLIC_API_URL: http://32.197.42.115:8080/api/v1
     ports:
       - "3000:3000"
     depends_on:

@@ -72,15 +72,15 @@ echo "[7/7] Waiting for services to start..."
 echo ""
 
 for i in {1..20}; do
-    if curl -s http://localhost:8000/api/v1/health > /dev/null 2>&1; then
+    if curl -s http://localhost:8080/api/v1/health > /dev/null 2>&1; then
         echo ""
         echo "╔══════════════════════════════════════════╗"
         echo "║          ✓ DEPLOYMENT COMPLETE!          ║"
         echo "╠══════════════════════════════════════════╣"
         echo "║                                          ║"
         echo "║  Frontend:  http://32.197.42.115:3000    ║"
-        echo "║  Backend:   http://32.197.42.115:8000    ║"
-        echo "║  Swagger:   http://32.197.42.115:8000/docs║"
+        echo "║  Backend:   http://32.197.42.115:8080    ║"
+        echo "║  Swagger:   http://32.197.42.115:8080/docs║"
         echo "║                                          ║"
         echo "║  Logs:  docker compose logs -f           ║"
         echo "║  Stop:  docker compose down              ║"
