@@ -79,7 +79,9 @@ def clearsky_ghi(timestamp_local: str) -> float | None:
         idx = pd.DatetimeIndex([pd.to_datetime(timestamp_local)]).tz_localize(
             BENGALURU.timezone, nonexistent="shift_forward", ambiguous="NaT"
         )
-        return round(float(_bengaluru_location().get_clearsky(idx, model="ineichen")["ghi"].iloc[0]), 2)
+        return round(
+            float(_bengaluru_location().get_clearsky(idx, model="ineichen")["ghi"].iloc[0]), 2
+        )
     except Exception:  # noqa: BLE001
         return None
 
@@ -123,8 +125,16 @@ def _data_mode() -> str:
         return "real"
 
 
-def _envelope(card: dict, model_filename: str, *, prediction_type: str, value, unit: str,
-              confidence_components: dict, warnings: list[str]) -> dict:
+def _envelope(
+    card: dict,
+    model_filename: str,
+    *,
+    prediction_type: str,
+    value,
+    unit: str,
+    confidence_components: dict,
+    warnings: list[str],
+) -> dict:
     card = card or {}
     return {
         "prediction_type": prediction_type,
@@ -135,9 +145,8 @@ def _envelope(card: dict, model_filename: str, *, prediction_type: str, value, u
         "training_geography": card.get("training_geography"),
         "target_geography": card.get("target_geography"),
         "local_data_used": card.get("local_data_available"),
-        "source_status": card.get("source_status") or [
-            s.get("label") for s in card.get("training_data_sources", [])
-        ],
+        "source_status": card.get("source_status")
+        or [s.get("label") for s in card.get("training_data_sources", [])],
         "confidence_components": confidence_components,
         "limitations": card.get("limitations", []),
         "production_ready": card.get("production_ready", False),
@@ -175,7 +184,11 @@ def predict_solar(inputs: dict) -> dict:
     value = max(0.0, value)
     metrics = (card or {}).get("metrics", {})
     env = _envelope(
-        card, SOLAR_PKL, prediction_type="irradiance_forecast", value=value, unit="W/m2",
+        card,
+        SOLAR_PKL,
+        prediction_type="irradiance_forecast",
+        value=value,
+        unit="W/m2",
         confidence_components={
             "model_test_r2": metrics.get("r2"),
             "model_test_rmse_wm2": metrics.get("rmse"),
@@ -222,8 +235,11 @@ def predict_cloud(inputs: dict) -> dict:
     label = int(proba >= 0.5)
     metrics = (card or {}).get("metrics", {})
     return _envelope(
-        card, CLOUD_PKL, prediction_type="irradiance_drop_risk",
-        value={"drop_risk": label, "probability": round(proba, 4)}, unit="probability",
+        card,
+        CLOUD_PKL,
+        prediction_type="irradiance_drop_risk",
+        value={"drop_risk": label, "probability": round(proba, 4)},
+        unit="probability",
         confidence_components={
             "predicted_probability": round(proba, 4),
             "model_test_f1": metrics.get("f1"),
@@ -254,8 +270,11 @@ def predict_dsm(inputs: dict) -> dict:
     rules = _card_rules()
     metrics = (card or {}).get("metrics", {})
     env = _envelope(
-        card, DSM_PKL, prediction_type="dsm_deviation_breach_risk",
-        value={"breach_risk": label, "probability": round(proba, 4)}, unit="probability",
+        card,
+        DSM_PKL,
+        prediction_type="dsm_deviation_breach_risk",
+        value={"breach_risk": label, "probability": round(proba, 4)},
+        unit="probability",
         confidence_components={
             "predicted_probability": round(proba, 4),
             "model_test_f1": metrics.get("f1"),
@@ -308,21 +327,35 @@ def agents_status() -> dict:
 
     settings = get_settings()
     agents = {
-        "solar": {"model_present": _bundle(SOLAR_PKL) is not None, **(_card_summary(SOLAR_CARD) or {})},
-        "cloud": {"model_present": _bundle(CLOUD_PKL) is not None, **(_card_summary(CLOUD_CARD) or {})},
+        "solar": {
+            "model_present": _bundle(SOLAR_PKL) is not None,
+            **(_card_summary(SOLAR_CARD) or {}),
+        },
+        "cloud": {
+            "model_present": _bundle(CLOUD_PKL) is not None,
+            **(_card_summary(CLOUD_CARD) or {}),
+        },
         "dsm": {"model_present": _bundle(DSM_PKL) is not None, **(_card_summary(DSM_CARD) or {})},
-        "load": {"model_present": _bundle(LOAD_PKL) is not None, **(_card_summary(LOAD_CARD) or {})},
+        "load": {
+            "model_present": _bundle(LOAD_PKL) is not None,
+            **(_card_summary(LOAD_CARD) or {}),
+        },
         "rl": {"model_present": False, **(_card_summary(RL_CARD) or {})},
     }
     manifest_path = prov.ml_data_dir() / "dataset_build_manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    manifest = (
+        json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    )
     return {
         "data_mode": settings.APP_DATA_MODE,
         "region": BENGALURU.display_name,
         "coordinates": [BENGALURU.latitude, BENGALURU.longitude],
         "source_geography_priority": [
-            "REAL_LOCAL(Bengaluru)", "REAL_KARNATAKA", "REAL_INDIA",
-            "REAL_COORDINATE_BASED", "REAL_NON_LOCAL(pretraining only)",
+            "REAL_LOCAL(Bengaluru)",
+            "REAL_KARNATAKA",
+            "REAL_INDIA",
+            "REAL_COORDINATE_BASED",
+            "REAL_NON_LOCAL(pretraining only)",
         ],
         "agents": agents,
         "warnings": data_warnings(agents),

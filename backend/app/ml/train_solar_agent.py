@@ -150,8 +150,10 @@ def train(data_mode: str = "real") -> dict:
         "production_ready": production_ready,
         "rows": split["n"],
     }
-    print(f"[train_solar_agent] TRAINED {best_name} | R2={best_metrics['r2']} "
-          f"RMSE={best_metrics['rmse']} W/m2 | production_ready={production_ready}")
+    print(
+        f"[train_solar_agent] TRAINED {best_name} | R2={best_metrics['r2']} "
+        f"RMSE={best_metrics['rmse']} W/m2 | production_ready={production_ready}"
+    )
     return result
 
 

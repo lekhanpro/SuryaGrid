@@ -304,7 +304,9 @@ class ModelCard:
                 continue
             hard_missing.append(k)
         if hard_missing:
-            raise ValueError(f"Model card '{self.model_name}' missing required fields: {hard_missing}")
+            raise ValueError(
+                f"Model card '{self.model_name}' missing required fields: {hard_missing}"
+            )
         if not self.production_ready and not self.reason_if_not_production_ready:
             raise ValueError(
                 f"Model card '{self.model_name}': production_ready=false requires "

@@ -100,9 +100,19 @@ def test_weather_dataset_has_source_metadata():
 
 def test_substation_dataset_honest_capacity_and_labels():
     df = _read_parquet_or_skip("bengaluru_substations_cleaned.parquet")
-    for col in ("substation_id", "latitude", "longitude", "voltage_kv", "capacity_mva",
-                "source", "source_url", "reliability_score", "missing_fields",
-                "data_geography", "ingestion_time"):
+    for col in (
+        "substation_id",
+        "latitude",
+        "longitude",
+        "voltage_kv",
+        "capacity_mva",
+        "source",
+        "source_url",
+        "reliability_score",
+        "missing_fields",
+        "data_geography",
+        "ingestion_time",
+    ):
         assert col in df.columns, f"substation missing {col}"
     # Capacity is never invented -> must be entirely null.
     assert df["capacity_mva"].isna().all(), "capacity_mva must stay null (never fabricated)"
@@ -174,9 +184,19 @@ def test_dsm_emits_no_rupees():
 # API provenance tests (skip if solar/cloud models absent)
 # --------------------------------------------------------------------------- #
 _ENVELOPE_KEYS = (
-    "prediction_type", "prediction_value", "unit", "model_file", "model_version",
-    "training_geography", "target_geography", "local_data_used", "source_status",
-    "confidence_components", "limitations", "production_ready", "data_mode",
+    "prediction_type",
+    "prediction_value",
+    "unit",
+    "model_file",
+    "model_version",
+    "training_geography",
+    "target_geography",
+    "local_data_used",
+    "source_status",
+    "confidence_components",
+    "limitations",
+    "production_ready",
+    "data_mode",
 )
 
 
@@ -199,8 +219,11 @@ def test_api_solar_envelope_and_estimated_pv():
         r = await _api_call(
             "post",
             "/api/v1/agents/solar/forecast",
-            json={"timestamp_local": "2024-06-01T12:00:00", "cloud_cover_percent": 10,
-                  "capacity_mw": 50},
+            json={
+                "timestamp_local": "2024-06-01T12:00:00",
+                "cloud_cover_percent": 10,
+                "capacity_mw": 50,
+            },
         )
         assert r.status_code == 200
         d = r.json()["data"]
@@ -225,8 +248,12 @@ def test_api_confidence_is_real_model_output_not_decorative():
         r = await _api_call(
             "post",
             "/api/v1/agents/cloud/risk",
-            json={"timestamp_local": "2024-06-01T12:00:00", "cloud_cover_percent": 95,
-                  "relative_humidity_percent": 90, "precipitation_mm": 3},
+            json={
+                "timestamp_local": "2024-06-01T12:00:00",
+                "cloud_cover_percent": 95,
+                "relative_humidity_percent": 90,
+                "precipitation_mm": 3,
+            },
         )
         assert r.status_code == 200
         d = r.json()["data"]
@@ -261,15 +288,20 @@ def test_api_dsm_requires_schedule_and_has_no_rupees():
     async def run():
         # Without a schedule -> honest NOT_AVAILABLE.
         r0 = await _api_call(
-            "post", "/api/v1/agents/dsm/assess",
+            "post",
+            "/api/v1/agents/dsm/assess",
             json={"timestamp_local": "2024-06-01T12:00:00", "cloud_cover_percent": 50},
         )
         assert r0.json()["data"]["status"] == prov.NOT_AVAILABLE
         # With a schedule -> assessment, no rupees.
         r = await _api_call(
-            "post", "/api/v1/agents/dsm/assess",
-            json={"timestamp_local": "2024-06-01T12:00:00", "cloud_cover_percent": 50,
-                  "scheduled_ghi_wm2": 800},
+            "post",
+            "/api/v1/agents/dsm/assess",
+            json={
+                "timestamp_local": "2024-06-01T12:00:00",
+                "cloud_cover_percent": 50,
+                "scheduled_ghi_wm2": 800,
+            },
         )
         d = r.json()["data"]
         assert d["emits_rupee_values"] is False

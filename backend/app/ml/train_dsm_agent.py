@@ -92,8 +92,11 @@ def train(data_mode: str = "real") -> dict:
         df, FEATURES, TARGET, order_col=ORDER_COL
     )
     clf = RandomForestClassifier(
-        n_estimators=250, max_depth=16, class_weight="balanced",
-        random_state=tu.RANDOM_STATE, n_jobs=-1,
+        n_estimators=250,
+        max_depth=16,
+        class_weight="balanced",
+        random_state=tu.RANDOM_STATE,
+        n_jobs=-1,
     )
     clf.fit(x_tr, y_tr)
     proba = clf.predict_proba(x_te)[:, 1]
@@ -164,8 +167,10 @@ def train(data_mode: str = "real") -> dict:
     )
     card_path = card.save(CARD_JSON)
 
-    print(f"[train_dsm_agent] TRAINED breach classifier | F1={metrics['f1']} "
-          f"AUC={metrics.get('roc_auc')} | rupees=OFF | production_ready={production_ready}")
+    print(
+        f"[train_dsm_agent] TRAINED breach classifier | F1={metrics['f1']} "
+        f"AUC={metrics.get('roc_auc')} | rupees=OFF | production_ready={production_ready}"
+    )
     return {
         "agent": "dsm",
         "status": "TRAINED",

@@ -173,7 +173,9 @@ def _fetch_nasa_power_daily_ghi(region: Region, start_year: int, end_year: int) 
 def build_weather_solar_history(
     region: Region, start_year: int, end_year: int, data_mode: str
 ) -> dict:
-    _log(f"Fetching Open-Meteo archive {start_year}-01-01..{end_year}-12-31 for {region.display_name}")
+    _log(
+        f"Fetching Open-Meteo archive {start_year}-01-01..{end_year}-12-31 for {region.display_name}"
+    )
     frames: list[pd.DataFrame] = []
     today = date.today()
     for yr in range(start_year, end_year + 1):
@@ -240,9 +242,9 @@ def build_weather_solar_history(
     if not nasa.empty:
         df = df.merge(nasa, on="date", how="left")
         # daily Open-Meteo GHI energy (kWh/m2) vs NASA daily for agreement metric
-        om_daily = (
-            df.groupby("date")["shortwave_radiation_wm2"].sum() / 1000.0
-        ).rename("om_ghi_kwh_m2_day")
+        om_daily = (df.groupby("date")["shortwave_radiation_wm2"].sum() / 1000.0).rename(
+            "om_ghi_kwh_m2_day"
+        )
         cmp = pd.concat([om_daily, nasa.set_index("date")["nasa_ghi_kwh_m2_day"]], axis=1).dropna()
         if len(cmp) > 10:
             nasa_agreement = {
@@ -438,7 +440,10 @@ def build_substations(region: Region, data_mode: str) -> dict:
 
 def _within_bengaluru(region: Region, rec: dict) -> bool:
     try:
-        return haversine_km(region.latitude, region.longitude, rec["latitude"], rec["longitude"]) <= 25.0
+        return (
+            haversine_km(region.latitude, region.longitude, rec["latitude"], rec["longitude"])
+            <= 25.0
+        )
     except Exception:  # noqa: BLE001
         return False
 
@@ -453,11 +458,7 @@ def _build_grid_features(sub: pd.DataFrame, region: Region) -> pd.DataFrame:
     feats = []
     for i in range(len(sub)):
         dists = np.array(
-            [
-                haversine_km(lats[i], lons[i], lats[j], lons[j])
-                for j in range(len(sub))
-                if j != i
-            ]
+            [haversine_km(lats[i], lons[i], lats[j], lons[j]) for j in range(len(sub)) if j != i]
         )
         nearest = float(dists.min()) if dists.size else None
         density_5km = int((dists <= 5.0).sum()) if dists.size else 0
@@ -579,7 +580,9 @@ def _detect_load_frame(csv_path) -> pd.DataFrame | None:
         return None
     cols = {c.lower(): c for c in df.columns}
 
-    dt_col = next((cols[k] for k in ("datetime", "timestamp", "date", "time", "date_time") if k in cols), None)
+    dt_col = next(
+        (cols[k] for k in ("datetime", "timestamp", "date", "time", "date_time") if k in cols), None
+    )
     year_col = cols.get("year")
     load_col = None
     for key in ("demand", "load", "mw", "power", "usage", "consumption", "value"):
@@ -616,7 +619,12 @@ def _detect_load_frame(csv_path) -> pd.DataFrame | None:
 
 def build_load_history(region: Region, data_mode: str, attempt_kaggle: bool) -> dict:
     if not attempt_kaggle:
-        return {"status": NOT_AVAILABLE, "rows": 0, "file": None, "reason": "kaggle attempt disabled"}
+        return {
+            "status": NOT_AVAILABLE,
+            "rows": 0,
+            "file": None,
+            "reason": "kaggle attempt disabled",
+        }
 
     raw_root = prov.raw_data_dir() / "load"
     for dataset in _KAGGLE_LOAD_CANDIDATES:
@@ -753,7 +761,9 @@ def build_dsm_training(weather: pd.DataFrame) -> dict:
     df = df.dropna(subset=["scheduled_ghi_wm2", "shortwave_radiation_wm2"])
     df = df[df["is_daylight"] == 1].copy()
     denom = df["scheduled_ghi_wm2"].where(df["scheduled_ghi_wm2"].abs() > 1e-6, np.nan)
-    df["deviation_percent"] = ((df["shortwave_radiation_wm2"] - df["scheduled_ghi_wm2"]) / denom) * 100.0
+    df["deviation_percent"] = (
+        (df["shortwave_radiation_wm2"] - df["scheduled_ghi_wm2"]) / denom
+    ) * 100.0
     df = df.dropna(subset=["deviation_percent"])
 
     def band(dev: float) -> str:
@@ -874,7 +884,9 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--data-mode", default="real", choices=["real", "demo"])
     p.add_argument("--start-year", type=int, default=2022)
     p.add_argument("--end-year", type=int, default=2024)
-    p.add_argument("--no-kaggle-load", action="store_true", help="Skip the Kaggle load-data attempt")
+    p.add_argument(
+        "--no-kaggle-load", action="store_true", help="Skip the Kaggle load-data attempt"
+    )
     return p.parse_args(argv)
 
 

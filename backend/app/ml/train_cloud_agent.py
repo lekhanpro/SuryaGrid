@@ -118,8 +118,10 @@ def train(data_mode: str = "real") -> dict:
     )
     card_path = card.save(CARD_JSON)
 
-    print(f"[train_cloud_agent] TRAINED | F1={metrics['f1']} AUC={metrics.get('roc_auc')} "
-          f"| production_ready={production_ready}")
+    print(
+        f"[train_cloud_agent] TRAINED | F1={metrics['f1']} AUC={metrics.get('roc_auc')} "
+        f"| production_ready={production_ready}"
+    )
     return {
         "agent": "cloud",
         "status": "TRAINED",

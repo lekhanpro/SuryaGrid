@@ -29,7 +29,12 @@ RANDOM_STATE = 42
 
 
 def chronological_split(
-    df: pd.DataFrame, feature_cols: list[str], target: str, *, order_col: str, test_frac: float = 0.2
+    df: pd.DataFrame,
+    feature_cols: list[str],
+    target: str,
+    *,
+    order_col: str,
+    test_frac: float = 0.2,
 ):
     """Sort by time, take the first (1-test_frac) rows as train, the rest as test."""
     work = df.sort_values(order_col).reset_index(drop=True)
