@@ -53,7 +53,7 @@ services:
       WEATHER_API_BASE_URL: ${WEATHER_API_BASE_URL:-https://api.open-meteo.com/v1/forecast}
       DSM_DEFAULT_REGION: ${DSM_DEFAULT_REGION:-Karnataka}
       DSM_DEFAULT_RULE_PROFILE: ${DSM_DEFAULT_RULE_PROFILE:-kerc-solar}
-      CORS_ORIGINS: '["http://suryagrid.mithungowda.in","http://suryagrid.mithungowda.in:3000","http://32.197.42.115:3000","http://localhost:3000"]'
+      CORS_ORIGINS: '["http://suryagrid.mithungowda.in","http://32.197.42.115:3000","http://localhost:3000"]'
       KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
       KAGGLE_KEY: ${KAGGLE_KEY:-}
     volumes:
@@ -81,7 +81,7 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://32.197.42.115:8080/api/v1
+        NEXT_PUBLIC_API_URL: http://suryagrid.mithungowda.in/api/v1
     ports:
       - "3000:3000"
     depends_on:
