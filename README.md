@@ -128,6 +128,12 @@ Redis · Next.js 14 / React / Tailwind / Recharts · Docker Compose.
 
 ## Documentation
 
+**Start here:**
+[App Flow & DSM Logic](docs/APP_FLOW.md) ·
+[System Architecture](docs/ARCHITECTURE.md) ·
+[AWS Deployment](docs/DEPLOYMENT.md)
+
+**Deep dives:**
 [Real-Data Phase 1.5](docs/REAL_DATA_PHASE1_5.md) ·
 [Source Registry](docs/SOURCE_REGISTRY.md) ·
 [Formula Sources](docs/FORMULA_SOURCES.md) ·
