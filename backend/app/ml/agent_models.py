@@ -54,6 +54,12 @@ def _bundle(filename: str):
     return _bundle_cached(filename, path.stat().st_mtime)
 
 
+def model_feature_columns(model_filename: str) -> list[str]:
+    """Feature columns a trained model bundle actually consumes ([] when not trained)."""
+    bundle = _bundle(model_filename)
+    return list(bundle["feature_columns"]) if bundle else []
+
+
 def _card(filename: str) -> dict | None:
     path = prov.model_metadata_dir() / filename
     if not path.exists():

@@ -301,6 +301,21 @@ export async function orchestrateSubstation(body: {
     body: JSON.stringify(body),
   });
 }
+// Same deterministic run + an `ai` block: LLM narrative when the backend has an
+// OpenAI-compatible endpoint configured, else an honest deterministic fallback.
+export async function orchestrateSubstationAI(body: {
+  substation_id: string;
+  site_capacity_mw?: number | null;
+  forecast_horizon_hours?: number;
+  scheduled_generation_mw?: number | null;
+  use_live_weather?: boolean;
+}) {
+  return apiFetch<any>("/orchestrate/substation/ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 export async function substationDsmForecast(body: {
   substation_id: string;
   site_capacity_mw?: number | null;

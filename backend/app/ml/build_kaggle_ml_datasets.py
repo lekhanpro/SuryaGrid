@@ -51,21 +51,39 @@ def build_pv() -> dict:
     out = df[[*feats, "ac_power", "timestamp", "plant_no"]].dropna(subset=[*feats, "ac_power"])
     out["source_label"] = prov.REAL_INDIA
     prov.write_parquet(out, "kaggle_pv_ac_training.parquet")
-    return {"file": "kaggle_pv_ac_training.parquet", "rows": int(len(out)), "features": feats,
-            "target": "ac_power", "label": prov.REAL_INDIA}
+    return {
+        "file": "kaggle_pv_ac_training.parquet",
+        "rows": int(len(out)),
+        "features": feats,
+        "target": "ac_power",
+        "label": prov.REAL_INDIA,
+    }
 
 
 def build_solar() -> dict:
     df = _cyc(_read("kaggle_solar_processed.parquet"))
     df = df[df["city"] == "Bengaluru"].copy()
-    feats = ["hour_sin", "hour_cos", "doy_sin", "doy_cos", "temperature_c", "pressure_kpa",
-             "precip_mm", "solar_zenith_deg"]
+    feats = [
+        "hour_sin",
+        "hour_cos",
+        "doy_sin",
+        "doy_cos",
+        "temperature_c",
+        "pressure_kpa",
+        "precip_mm",
+        "solar_zenith_deg",
+    ]
     out = df[[*feats, "ghi_wm2", "timestamp"]].dropna(subset=[*feats, "ghi_wm2"])
     out = out[out["ghi_wm2"] >= 0]
     out["source_label"] = prov.REAL_BENGALURU
     prov.write_parquet(out, "kaggle_solar_irradiance_training.parquet")
-    return {"file": "kaggle_solar_irradiance_training.parquet", "rows": int(len(out)),
-            "features": feats, "target": "ghi_wm2", "label": prov.REAL_BENGALURU}
+    return {
+        "file": "kaggle_solar_irradiance_training.parquet",
+        "rows": int(len(out)),
+        "features": feats,
+        "target": "ghi_wm2",
+        "label": prov.REAL_BENGALURU,
+    }
 
 
 def build_cloud() -> dict:
@@ -75,32 +93,60 @@ def build_cloud() -> dict:
     df = df[(df["solar_zenith_deg"] < 90) & df["clearness_index"].notna()]
     df = df[df["clearness_index"] >= 0]  # drop residual fill
     df["irradiance_drop_risk"] = (df["clearness_index"] < CLEARNESS_DROP_THRESHOLD).astype(int)
-    feats = ["hour_sin", "hour_cos", "doy_sin", "doy_cos", "temperature_c", "pressure_kpa",
-             "precip_mm"]
+    feats = [
+        "hour_sin",
+        "hour_cos",
+        "doy_sin",
+        "doy_cos",
+        "temperature_c",
+        "pressure_kpa",
+        "precip_mm",
+    ]
     out = df[[*feats, "irradiance_drop_risk", "clearness_index", "timestamp"]].dropna(
         subset=[*feats, "irradiance_drop_risk"]
     )
     out["source_label"] = prov.REAL_BENGALURU
     prov.write_parquet(out, "kaggle_cloud_training.parquet")
-    return {"file": "kaggle_cloud_training.parquet", "rows": int(len(out)), "features": feats,
-            "target": "irradiance_drop_risk",
-            "positive_rate": round(float(out["irradiance_drop_risk"].mean()), 4),
-            "label": prov.REAL_BENGALURU}
+    return {
+        "file": "kaggle_cloud_training.parquet",
+        "rows": int(len(out)),
+        "features": feats,
+        "target": "irradiance_drop_risk",
+        "positive_rate": round(float(out["irradiance_drop_risk"].mean()), 4),
+        "label": prov.REAL_BENGALURU,
+    }
 
 
 def build_load() -> dict:
-    df = _cyc(_read("kaggle_load_processed.parquet")).sort_values("timestamp").reset_index(drop=True)
+    df = (
+        _cyc(_read("kaggle_load_processed.parquet")).sort_values("timestamp").reset_index(drop=True)
+    )
     tgt = "national_demand_mw"
     df["lag_24h"] = df[tgt].shift(24)
     df["lag_168h"] = df[tgt].shift(168)
     df["roll_24h_mean"] = df[tgt].rolling(24, min_periods=12).mean().shift(1)
-    feats = ["hour_sin", "hour_cos", "dow_sin", "dow_cos", "doy_sin", "doy_cos", "is_weekend",
-             "lag_24h", "lag_168h", "roll_24h_mean"]
+    feats = [
+        "hour_sin",
+        "hour_cos",
+        "dow_sin",
+        "dow_cos",
+        "doy_sin",
+        "doy_cos",
+        "is_weekend",
+        "lag_24h",
+        "lag_168h",
+        "roll_24h_mean",
+    ]
     out = df[[*feats, tgt, "timestamp"]].dropna(subset=[*feats, tgt])
     out["source_label"] = prov.REAL_INDIA
     prov.write_parquet(out, "kaggle_load_training.parquet")
-    return {"file": "kaggle_load_training.parquet", "rows": int(len(out)), "features": feats,
-            "target": tgt, "label": prov.REAL_INDIA}
+    return {
+        "file": "kaggle_load_training.parquet",
+        "rows": int(len(out)),
+        "features": feats,
+        "target": tgt,
+        "label": prov.REAL_INDIA,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -111,7 +157,10 @@ def main(argv: list[str] | None = None) -> int:
     prov.ensure_dirs()
     for fn in (build_pv, build_solar, build_cloud, build_load):
         r = fn()
-        C.log("build_kaggle_ml", f"{r['file']}: {r['rows']} rows | target={r['target']} | {r['label']}")
+        C.log(
+            "build_kaggle_ml",
+            f"{r['file']}: {r['rows']} rows | target={r['target']} | {r['label']}",
+        )
     return 0
 
 

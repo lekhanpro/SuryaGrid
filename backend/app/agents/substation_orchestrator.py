@@ -341,6 +341,18 @@ class SubstationOrchestrator:
             }
         )
 
+        # Enriched calculation_trace field arrays (plan §11) --------------------
+        calc.update(
+            self._trace_field_arrays(
+                context=context,
+                weather_by_key=weather_by_key,
+                timestamps=timestamps,
+                dsm=dsm,
+                site_capacity_mw=site_capacity_mw,
+                calc=calc,
+            )
+        )
+
         # 7) Orchestrator summary ---------------------------------------------
         data_sources = self._data_sources(context)
         limitations = self._limitations(context, wmeta, site_capacity_mw, dsm)
@@ -374,6 +386,78 @@ class SubstationOrchestrator:
             "is_estimated": True,
             "is_synthetic": False,
             "production_ready": False,
+        }
+
+    # ------------------------------------------------------------------ #
+    # Enriched calculation_trace (plan §11)
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _trace_field_arrays(
+        *,
+        context: SubstationContext,
+        weather_by_key: dict,
+        timestamps: list[datetime],
+        dsm: dict,
+        site_capacity_mw: float | None,
+        calc: dict,
+    ) -> dict:
+        """Which real fields fed this run, which were missing, and what was skipped why."""
+        optional = ("name", "operator", "voltage_kv", "capacity_mva", "district", "state")
+        fields_used = ["substation_id", "latitude", "longitude"] + [
+            f for f in optional if getattr(context, f) is not None
+        ]
+        fields_missing = [f for f in optional if getattr(context, f) is None]
+
+        # Weather features actually supplied to the models for this run (None = not fetched),
+        # unioned across every forecast hour (live coverage can be partial).
+        weather_features = sorted(
+            {
+                k
+                for t in timestamps
+                for k, v in weather_by_key[t.strftime(_HOUR_KEY)].items()
+                if k != "timestamp_local" and v is not None
+            }
+        )
+
+        model_files = [
+            v["model_file"] for v in calc.values() if isinstance(v, dict) and v.get("model_file")
+        ]
+        breach = dsm.get("breach_risk")
+        if isinstance(breach, dict) and breach.get("model_file"):
+            model_files.append(breach["model_file"])
+
+        formulas = [v["formula"] for v in calc.values() if isinstance(v, dict) and v.get("formula")]
+
+        skipped: list[str] = []
+        skip_reasons: dict[str, str] = {}
+        for b in dsm.get("blocked_calculations", []):
+            skipped.append(b["calculation"])
+            skip_reasons[b["calculation"]] = b["reason"]
+        if not site_capacity_mw:
+            skipped.append("estimated_generation_mw")
+            skip_reasons["estimated_generation_mw"] = (
+                "site_capacity_mw not provided by the user; output is irradiance only"
+            )
+        if dsm.get("deviation_percent") is None:
+            skipped.append("deviation_percent")
+            skip_reasons["deviation_percent"] = (
+                breach["reason"]
+                if isinstance(breach, dict) and breach.get("reason")
+                else "scheduled vs estimated energy comparison unavailable for this run"
+            )
+
+        return {
+            "selected_substation_fields_used": fields_used,
+            "selected_substation_fields_missing": fields_missing,
+            "weather_features_used": weather_features,
+            "solar_features_used": agent_models.model_feature_columns(agent_models.SOLAR_PKL),
+            "grid_features_used": [],
+            "tariff_features_used": [],
+            "load_features_used": [],
+            "model_files_used": model_files,
+            "formulas_or_rules_used": formulas,
+            "calculations_skipped": skipped,
+            "skip_reasons": skip_reasons,
         }
 
     # ------------------------------------------------------------------ #

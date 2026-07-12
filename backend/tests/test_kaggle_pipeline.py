@@ -23,8 +23,9 @@ def test_require_real_mode_rejects_bad_mode():
 
 def test_real_mode_blocks_synthetic_label():
     with pytest.raises(prov.SyntheticFallbackError):
-        prov.assert_real_mode_allows(prov.SYNTHETIC_AUGMENTED_FROM_REAL,
-                                     data_mode="real", context="kaggle")
+        prov.assert_real_mode_allows(
+            prov.SYNTHETIC_AUGMENTED_FROM_REAL, data_mode="real", context="kaggle"
+        )
 
 
 def test_builder_raises_on_missing_processed_file():
@@ -37,9 +38,15 @@ def test_builder_raises_on_missing_processed_file():
 def test_stamp_metadata_marks_real_not_synthetic():
     import pandas as pd
 
-    df = C.stamp_metadata(pd.DataFrame({"x": [1, 2]}), source_name="s", kaggle_slug="a/b",
-                          source_url="u", geography="India", source_label=prov.REAL_INDIA,
-                          data_type="t")
+    df = C.stamp_metadata(
+        pd.DataFrame({"x": [1, 2]}),
+        source_name="s",
+        kaggle_slug="a/b",
+        source_url="u",
+        geography="India",
+        source_label=prov.REAL_INDIA,
+        data_type="t",
+    )
     assert df["is_real"].all() and (~df["is_synthetic"]).all()
     assert (df["source_label"] == prov.REAL_INDIA).all()
 
@@ -64,19 +71,34 @@ def test_raw_kaggle_files_present():
 
 
 def test_processed_files_are_real():
-    for name in ("kaggle_pv_generation_processed.parquet", "kaggle_solar_processed.parquet",
-                 "kaggle_load_processed.parquet"):
+    for name in (
+        "kaggle_pv_generation_processed.parquet",
+        "kaggle_solar_processed.parquet",
+        "kaggle_load_processed.parquet",
+    ):
         df = _processed_or_skip(name)
-        for col in ("is_real", "is_synthetic", "source_name", "kaggle_slug", "source_url",
-                    "data_geography", "source_label", "data_type"):
+        for col in (
+            "is_real",
+            "is_synthetic",
+            "source_name",
+            "kaggle_slug",
+            "source_url",
+            "data_geography",
+            "source_label",
+            "data_type",
+        ):
             assert col in df.columns, f"{name} missing {col}"
         assert bool(df["is_real"].all())
         assert not bool(df["is_synthetic"].any())
 
 
 def test_ml_training_files_exist():
-    for name in ("kaggle_pv_ac_training.parquet", "kaggle_solar_irradiance_training.parquet",
-                 "kaggle_cloud_training.parquet", "kaggle_load_training.parquet"):
+    for name in (
+        "kaggle_pv_ac_training.parquet",
+        "kaggle_solar_irradiance_training.parquet",
+        "kaggle_cloud_training.parquet",
+        "kaggle_load_training.parquet",
+    ):
         if not prov.ml_file_exists(name):
             pytest.skip(f"{name} not built")
         df = prov.read_parquet(name)
@@ -129,6 +151,7 @@ def test_api_kaggle_status_has_slug_and_prod_flag():
         assert models["pv_ac"]["kaggle_dataset_slug"]
         assert models["pv_ac"]["production_ready"] is False  # REAL_INDIA plant
         assert models["solar_irradiance"]["training_geography"].startswith("Bengaluru")
+
     asyncio.run(run())
 
 
@@ -137,17 +160,35 @@ def test_api_kaggle_pv_estimate_has_provenance():
         pytest.skip("kaggle pv model not trained")
 
     async def run():
-        r = await _call("post", "/api/v1/kaggle/pv/estimate",
-                        json={"irradiation": 0.8, "ambient_temperature_c": 32,
-                              "module_temperature_c": 45, "hour_of_day": 12})
+        r = await _call(
+            "post",
+            "/api/v1/kaggle/pv/estimate",
+            json={
+                "irradiation": 0.8,
+                "ambient_temperature_c": 32,
+                "module_temperature_c": 45,
+                "hour_of_day": 12,
+            },
+        )
         assert r.status_code == 200
         d = r.json()["data"]
-        for k in ("prediction_type", "prediction_value", "model_file", "model_version",
-                  "kaggle_dataset_slug", "training_geography", "target_geography",
-                  "uses_non_local_data", "production_ready", "limitations", "data_mode"):
+        for k in (
+            "prediction_type",
+            "prediction_value",
+            "model_file",
+            "model_version",
+            "kaggle_dataset_slug",
+            "training_geography",
+            "target_geography",
+            "uses_non_local_data",
+            "production_ready",
+            "limitations",
+            "data_mode",
+        ):
             assert k in d, f"pv estimate missing {k}"
         assert d["prediction_value"] >= 0.0
         assert d["production_ready"] is False
+
     asyncio.run(run())
 
 

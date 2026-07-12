@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.location_data_agent import LocationDataAgent
 from app.core.exceptions import AppException
+from app.core.logging import logger
 from app.db import repository
 from app.db.session import get_db
 from app.schemas.requests import SubstationImportRequest
@@ -59,9 +60,46 @@ async def list_substations(
 ):
     from app.agents.location_data_agent import _serialize_substation
 
-    subs = await repository.list_substations(db, limit=limit)
+    try:
+        subs = await repository.list_substations(db, limit=limit)
+    except Exception as exc:  # noqa: BLE001 - DB unavailable -> catalog below, never a 500 dropdown
+        logger.warning(f"/substations DB list failed ({exc}); falling back to parquet catalog")
+        subs = []
+    if subs:
+        return success_response(
+            data={
+                "count": len(subs),
+                "substations": [_serialize_substation(s) for s in subs],
+                "source": "database",
+            }
+        )
+
+    # DB empty (e.g. fresh deployment): serve the parquet catalog so /substations and
+    # /substations/catalog agree on one authoritative list. Fields OSM does not carry
+    # (operator/district/state) stay null - never guessed.
+    from app.services.substation_context_service import get_substation_context_service
+
+    catalog = get_substation_context_service().list_catalog(limit=limit)
+    substations = [
+        {
+            "id": c["substation_id"],
+            "name": c["name"] or c["display_label"],
+            "voltage_level": f"{c['voltage_kv']:g} kV" if c["voltage_kv"] is not None else None,
+            "operator": None,
+            "latitude": c["latitude"],
+            "longitude": c["longitude"],
+            "district": None,
+            "state": None,
+            "country": None,
+            "source_name": "OpenStreetMap (parquet catalog)",
+            "source_url": None,
+            "source_confidence": c["reliability_score"],
+            "source_label": c["source_label"],
+        }
+        for c in catalog
+    ]
     return success_response(
-        data={"count": len(subs), "substations": [_serialize_substation(s) for s in subs]}
+        data={"count": len(substations), "substations": substations, "source": "parquet_catalog"}
     )
 
 

@@ -89,8 +89,10 @@ async def kaggle_status():
             "reason_if_not_production_ready": c.get("reason_if_not_production_ready"),
             "data_mode": c.get("data_mode"),
         }
-    return success_response(data={"data_mode": get_settings().APP_DATA_MODE, "models": out},
-                            message="Kaggle-trained model status (real data).")
+    return success_response(
+        data={"data_mode": get_settings().APP_DATA_MODE, "models": out},
+        message="Kaggle-trained model status (real data).",
+    )
 
 
 @router.post("/kaggle/pv/estimate")
@@ -99,9 +101,14 @@ async def kaggle_pv_estimate(body: PVInput):
     card = _card(_CARDS["pv_ac"])
     if bundle is None or card is None:
         return success_response(
-            data={"prediction_type": "pv_ac_power", "prediction_value": None,
-                  "status": prov.NOT_AVAILABLE, "reason": "kaggle_pv_ac_model not trained"},
-            message="Kaggle PV model unavailable.")
+            data={
+                "prediction_type": "pv_ac_power",
+                "prediction_value": None,
+                "status": prov.NOT_AVAILABLE,
+                "reason": "kaggle_pv_ac_model not trained",
+            },
+            message="Kaggle PV model unavailable.",
+        )
     feats = {
         "irradiation": body.irradiation,
         "ambient_temperature_c": body.ambient_temperature_c,
@@ -132,4 +139,5 @@ async def kaggle_pv_estimate(body: PVInput):
                 "production_ready=false. Irradiation is the dataset's normalised sensor value.",
             ],
         },
-        message="Kaggle PV AC-power estimate with provenance.")
+        message="Kaggle PV AC-power estimate with provenance.",
+    )

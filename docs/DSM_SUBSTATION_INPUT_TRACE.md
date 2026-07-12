@@ -95,3 +95,21 @@ Substation `OSM-1299917513` (220 kV, `capacity_mva = null`), `site_capacity_mw =
 
 Verified by `backend/tests/test_substation_workflow.py`
 (`test_dsm_receives_substation_context`, `test_dsm_blocks_capacity_load_and_tariff_and_no_rupees`).
+
+
+---
+
+## Related planning documents
+
+- **[EXECUTION_PLAN_SUBSTATION_DSM_WORKFLOW.md](EXECUTION_PLAN_SUBSTATION_DSM_WORKFLOW.md)** — §9
+  "DSM Engine Data Usage Plan" enumerates the enabled vs blocked calculations and the official
+  sources required to unblock capacity, load, and rupee tariff.
+- **[SUBSTATION_DRIVEN_AGENT_WORKFLOW.md](SUBSTATION_DRIVEN_AGENT_WORKFLOW.md)** — the full agent
+  workflow this DSM step belongs to.
+- **[report/suryagrid_execution_plan_and_workflow.pdf](report/suryagrid_execution_plan_and_workflow.pdf)**
+  — compiled technical execution plan.
+
+> Reflects the DSM behaviour **implemented at commit `5bed3cd`**: framework-only,
+> `emits_rupee_values=false`, with `substation_loading_percent`, `load_following_optimisation`, and
+> `dsm_rupee_charge` blocked pending official sources (KPTCL/BESCOM capacity, KPTCL-SLDC load,
+> KERC/CERC tariff order).

@@ -1,0 +1,117 @@
+\usepackage[margin=0.78in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,backgrounds,calc}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{underscore}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{navy}{HTML}{102A43}
+\definecolor{blue}{HTML}{1D70A2}
+\definecolor{cyan}{HTML}{2E86AB}
+\definecolor{green}{HTML}{2A9D8F}
+\definecolor{amber}{HTML}{F4A261}
+\definecolor{red}{HTML}{D95D39}
+\definecolor{violet}{HTML}{7B61A8}
+\definecolor{ink}{HTML}{243B53}
+\definecolor{muted}{HTML}{627D98}
+\definecolor{paleBlue}{HTML}{EAF4FA}
+\definecolor{paleGreen}{HTML}{EAF7F4}
+\definecolor{paleAmber}{HTML}{FFF4E6}
+\definecolor{grid}{HTML}{CAD8E3}
+
+\newcommand{\stImpl}{\textcolor{green}{\textbf{IMPLEMENTED}}}
+\newcommand{\stPartial}{\textcolor{amber!80!black}{\textbf{PARTIAL}}}
+\newcommand{\stPlan}{\textcolor{blue}{\textbf{PLANNED}}}
+\newcommand{\stGap}{\textcolor{red}{\textbf{GAP}}}
+\newcommand{\stBlocked}{\textcolor{red}{\textbf{BLOCKED}}}
+\newcommand{\stGate}{\textcolor{violet}{\textbf{GATED}}}
+\newcommand{\stVerified}{\textcolor{green}{\textbf{VERIFIED}}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\gate}[1]{\textcolor{blue}{\textbf{#1}}}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\sloppy
+\setlength{\emergencystretch}{3em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist[itemize]{leftmargin=1.35em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.55em,itemsep=2pt,topsep=3pt}
+\setcounter{tocdepth}{1}
+\renewcommand{\arraystretch}{1.18}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\bfseries\textcolor{navy}{SURYAGRID AI}}
+\fancyhead[R]{\small\textcolor{muted}{\ReportShortTitle}}
+\fancyfoot[L]{\footnotesize\textcolor{muted}{Project Team Document | 9 July 2026}}
+\fancyfoot[R]{\footnotesize\textcolor{muted}{Page \thepage\ of \pageref{LastPage}}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\tikzset{
+  layer/.style={rectangle, rounded corners=2pt, thick, minimum height=1.05cm,
+                text width=13.0cm, align=left, font=\small},
+  component/.style={rectangle, rounded corners=2pt, draw=blue, fill=paleBlue,
+                   text width=2.35cm, minimum height=1.1cm, align=center, font=\scriptsize},
+  agent/.style={rectangle, rounded corners=2pt, draw=green, fill=paleGreen,
+                text width=2.35cm, minimum height=1.1cm, align=center, font=\scriptsize},
+  aiagent/.style={rectangle, rounded corners=2pt, draw=violet, fill=violet!7,
+                  text width=2.35cm, minimum height=1.1cm, align=center, font=\scriptsize},
+  store/.style={cylinder, shape border rotate=90, aspect=0.28, draw=amber!80!black,
+                fill=paleAmber, minimum width=2.25cm, minimum height=1.15cm,
+                align=center, font=\scriptsize},
+  decision/.style={diamond, aspect=2, draw=amber!80!black, fill=paleAmber,
+                   align=center, font=\scriptsize, inner sep=1pt},
+  flow/.style={-{Stealth[length=2.2mm]}, thick, draw=navy},
+  dataflow/.style={-{Stealth[length=2.0mm]}, thick, draw=blue},
+  aiflow/.style={-{Stealth[length=2.0mm]}, thick, dashed, draw=violet}
+}
+
+\newenvironment{callout}[2][paleBlue]
+  {\begin{quote}\color{ink}\noindent
+   \textcolor{blue}{\rule{2.5pt}{12pt}}\hspace{6pt}
+   \textbf{\textcolor{navy}{#2}}\par\smallskip}
+  {\par\smallskip\textcolor{grid}{\rule{\linewidth}{0.4pt}}\end{quote}}
+
+\newcommand{\teamtitlepage}[3]{
+\begin{titlepage}
+\pagecolor{navy}
+\color{white}
+\vspace*{2.0cm}
+{\large\bfseries\textcolor{cyan!35}{SURYAGRID AI}\par}
+\vspace{0.5cm}
+{\Huge\bfseries #1\par}
+\vspace{0.6cm}
+{\Large\textcolor{paleBlue}{#2}\par}
+\vspace{0.9cm}
+\textcolor{cyan!55}{\rule{0.88\textwidth}{1.1pt}}\par
+\vspace{0.8cm}
+{\large #3\par}
+\vfill
+\begin{tabular}{@{}rl@{}}
+\textbf{Prepared by:} & SuryaGrid Project Team\\[4pt]
+\textbf{Date:} & 9 July 2026\\[4pt]
+\textbf{Repository baseline:} & \code{5bed3cd} on \code{main}\\[4pt]
+\textbf{Primary repository:} & \url{https://github.com/DBIT-Banglore/SuryaGrid}\\
+\end{tabular}\par
+\vspace{1.0cm}
+{\small\textcolor{paleBlue}{
+Team document. No individual authorship is asserted. Implemented claims are tied to repository
+history, current code, tests, model cards, or recorded verification. Planned claims are marked
+and gated by their required evidence.
+}\par}
+\end{titlepage}
+\nopagecolor
+\color{ink}
+}

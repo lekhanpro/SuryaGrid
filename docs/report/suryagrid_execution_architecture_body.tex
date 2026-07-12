@@ -1,0 +1,643 @@
+\part{Complete Execution and Agentic Architecture}
+
+\section{Outcome and Scope}
+
+The target is a production-capable solar decision-support platform that connects weather and
+station data to forecast models, deterministic energy and DSM calculations, safe agentic
+reasoning, operator workflows, and eventually validated plant telemetry. The system must answer:
+
+\begin{enumerate}
+  \item How much power can each DG or solar station generate over the selected horizon?
+  \item How does the forecast compare with schedule, request, demand, and measured actuals?
+  \item What energy gap, risk band, or regulatory DSM result follows?
+  \item What should an operator review or do next, with complete provenance and calculation trace?
+  \item Can a constrained RL policy improve advisory recommendations after real local outcomes exist?
+\end{enumerate}
+
+\begin{callout}{Dual truth model}
+Every response has a deterministic truth plane and an optional reasoning plane. The truth plane
+owns all source data, units, forecasts, formulas, model outputs, and money calculations. The
+reasoning plane may route tools, summarize, detect inconsistencies, and recommend review actions.
+It may never overwrite numeric results or invent missing values.
+\end{callout}
+
+\subsection{Four-level product model}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=2.2mm]
+\node[layer, draw=blue, fill=blue!5] (l4)
+  {\textbf{\textcolor{blue}{L4 - Experience and Workflow}}\quad
+  Next.js operator UI, REST APIs, agent orchestration, alerts, audit, reports, and connectors};
+\node[layer, below=of l4, draw=red, fill=red!5] (l3)
+  {\textbf{\textcolor{red}{L3 - Policy and Decision}}\quad
+  deterministic DSM, reward/penalty/discount policy, approvals, and gated RL advice};
+\node[layer, below=of l3, draw=amber!90!black, fill=amber!9] (l2)
+  {\textbf{\textcolor{amber!80!black}{L2 - Intelligence}}\quad
+  irradiance/PV/load forecasts, cloud risk, energy balance, uncertainty, anomaly detection};
+\node[layer, below=of l2, draw=green, fill=green!6] (l1)
+  {\textbf{\textcolor{green}{L1 - Data and APIs}}\quad
+  Open-Meteo, planned NASA POWER/Solcast, OSM/KPTCL, schedules, meters, plant and load telemetry};
+\end{tikzpicture}
+\caption{The complete four-level SuryaGrid product model.}
+\end{figure}
+
+\section{Full Frontend-Backend-Agent Architecture}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.96\linewidth}{!}{
+\begin{tikzpicture}[node distance=5mm and 7mm]
+\node[component] (user) {Operator / analyst\\browser};
+\node[component, right=of user] (next) {Next.js 14\\pages and components};
+\node[component, right=of next] (client) {Typed frontend\\API client};
+\node[component, right=of client] (fastapi) {FastAPI\\61 API routes};
+\node[component, right=of fastapi] (guard) {Auth, RBAC,\\rate/data-mode guards};
+
+\node[agent, below=10mm of fastapi] (orch) {Deterministic\\orchestrators};
+\node[aiagent, left=of orch] (aiorch) {LangGraph AI\\orchestrator};
+\node[agent, right=of orch] (tools) {Typed numeric\\tool gateway};
+
+\node[agent, below=10mm of aiorch] (source) {Source/API and\\weather agents};
+\node[agent, right=of source] (forecast) {Forecast, cloud,\\load and risk};
+\node[agent, right=of forecast] (logic) {Energy, DSM,\\reward policy};
+\node[aiagent, right=of logic] (explain) {Explanation and\\anomaly agents};
+
+\node[store, below=10mm of source] (providers) {External\\providers};
+\node[store, right=of providers] (models) {Model cards\\and artifacts};
+\node[store, right=of models] (db) {PostgreSQL /\\SQLite};
+\node[store, right=of db] (redis) {Redis cache,\\quota, jobs};
+
+\draw[flow] (user) -- (next);
+\draw[flow] (next) -- (client);
+\draw[flow] (client) -- (fastapi);
+\draw[flow] (fastapi) -- (guard);
+\draw[flow] (guard) |- (orch);
+\draw[aiflow] (guard) |- (aiorch);
+\draw[flow] (aiorch) -- (orch);
+\draw[flow] (orch) -- (tools);
+\draw[dataflow] (tools) |- (source);
+\draw[dataflow] (tools) |- (forecast);
+\draw[dataflow] (tools) |- (logic);
+\draw[aiflow] (tools) -- (explain);
+\draw[dataflow] (source) -- (providers);
+\draw[dataflow] (forecast) -- (models);
+\draw[dataflow] (logic) -- (db);
+\draw[dataflow] (source) to[bend left=12] (redis);
+\draw[dataflow] (explain) |- (db);
+\draw[flow] (explain.north) |- (orch.east);
+\draw[flow] (orch.north) -- (fastapi.south);
+\draw[flow] (fastapi.west) to[bend left=22] (client.east);
+\end{tikzpicture}}
+\caption{Target connection architecture. Solid navy paths are request/control; blue paths carry
+typed data; dashed violet paths are optional LLM reasoning.}
+\end{figure}
+
+\subsection{Connection contract}
+
+\begin{enumerate}
+  \item The UI calls only the typed client in \code{frontend/lib/api.ts}; pages do not call
+        providers or model files directly.
+  \item FastAPI validates request identity, role, site scope, data mode, units, and schema.
+  \item The deterministic orchestrator remains the production fallback and numerical authority.
+  \item The optional LangGraph route chooses from an allowlist of typed tools; tools call existing
+        providers, models, energy services, and DSM engines.
+  \item Tool output is immutable and hashed into the trace before an LLM sees it.
+  \item The LLM returns schema-validated routing, explanation, anomaly, or escalation fields.
+  \item Persistence stores inputs, source IDs, model/formula/policy versions, outputs, agent trace,
+        calculation trace, latency, cost, and approval status.
+  \item The API returns one stable response envelope to the UI. If LLM service is unavailable,
+        numeric output still completes and the explanation is marked unavailable or deterministic.
+\end{enumerate}
+
+\section{Frontend to Backend Connection Matrix}
+
+\begin{footnotesize}
+\begin{longtable}{@{}L{2.3cm}L{3.3cm}L{4.4cm}L{4.4cm}@{}}
+\caption{Frontend pages, backend contracts, and agent ownership.}\label{tab:frontback}\\
+\toprule
+\textbf{Frontend surface} & \textbf{Primary client calls} & \textbf{Backend route groups} &
+\textbf{Agents/services}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Frontend surface} & \textbf{Primary client calls} & \textbf{Backend route groups} &
+\textbf{Agents/services}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Dashboard & health, predict, orchestrate substation, generation timeline &
+\code{/health}, \code{/predict}, \code{/orchestrate/substation}, \code{/generation/timeline} &
+orchestrator, substation orchestrator, forecast, risk, explanation\\
+Locations & catalog, context, nearest, coverage &
+\code{/substations/*}, \code{/locations/*}, \code{/sites/*/data-coverage} &
+location data, source registry, substation context\\
+Predictions & predict site, forecast, model status &
+\code{/predict/*}, \code{/forecast/*}, \code{/ml/model/status} &
+forecast, feature engineering, model registry\\
+Timeline & timeline, summary, generation timeline &
+\code{/timeline/*}, \code{/summary/*}, \code{/generation/timeline} &
+forecast, energy, DSM classifier\\
+Energy & energy and consumption profiles &
+\code{/energy/*}, \code{/consumption/profiles} &
+energy service, forecast, consumption service\\
+DSM & profiles, advanced check, substation DSM, Karnataka DSM &
+\code{/dsm/*}, \code{/dsm/forecast}, \code{/dsm/karnataka/*} &
+DSM classifier, DSM engine, reward/policy\\
+Settlement & settle day, settlement history, RL rates &
+\code{/settle*}, \code{/settlements/*}, \code{/rl/rates} &
+reward, persistence, energy/DSM services\\
+RL Lab & train, rates, run history &
+\code{/rl/train}, \code{/rl/rates}, \code{/rl/runs} &
+RL environment/trainer, persistence; production use gated\\
+ML & ingest, build, train, predict, status &
+\code{/ml/*}, \code{/kaggle/*} &
+Kaggle data, feature engineering, model registry\\
+Data Sources & source catalog, provider status &
+\code{/sources/*}, \code{/data-sources/status}, \code{/providers/status} &
+source registry, API management, live weather\\
+Karnataka & regions, seed, BESCOM status, Karnataka DSM &
+\code{/karnataka/*}, \code{/bescom/status}, \code{/dsm/karnataka/*} &
+location, BESCOM connector framework, DSM engine\\
+System & health, system status, agent/data status &
+\code{/health}, \code{/system/status}, \code{/agents/*} &
+API management, source registry, all status providers\\
+\end{longtable}
+\end{footnotesize}
+
+\section{Agentic Architecture and Agent Inventory}
+
+\subsection{Current deterministic and ML agents}
+
+\begin{footnotesize}
+\begin{longtable}{@{}L{3.1cm}L{4.5cm}L{4.1cm}L{3.0cm}@{}}
+\caption{Existing agent modules and target role.}\label{tab:currentagents}\\
+\toprule
+\textbf{Module} & \textbf{Responsibility} & \textbf{Connects to} & \textbf{Status}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Module} & \textbf{Responsibility} & \textbf{Connects to} & \textbf{Status}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\code{api_agent.py} & provider choice, failover, quota state & providers, Redis, orchestrator & \stPartial\\
+\code{api_management_agent.py} & provider health, retry, rate visibility & system/status routes & \stPartial\\
+\code{source_registry_agent.py} & source records and formula references & registry, provenance, UI & \stImpl\\
+\code{live_weather_agent.py} & live weather and labelled fallback & Open-Meteo, Redis, DB & \stImpl\\
+\code{kaggle_data_agent.py} & Kaggle ingestion and normalization & data pipeline and model builds & \stImpl\\
+\code{location_data_agent.py} & locations, substations, coverage & OSM parquet, site services & \stImpl\\
+\code{feature_engineering_agent.py} & quality checks and model features & dataset builder, ML models & \stImpl\\
+\code{forecast_agent.py} & formula/ML/hybrid solar nowcast & weather, pvlib, model registry & \stImpl\\
+\code{dsm_classifier_agent.py} & interval deviation classification & schedule, forecast/actual & \stImpl\\
+\code{dsm_engine_agent.py} & rule-profile resolution and persistence & DSM repository and policy & \stPartial\\
+\code{risk_agent.py} & deterministic operational risk & forecast and DSM output & \stImpl\\
+\code{fuzzy_risk_agent.py} & fuzzy risk inference & forecast/DSM features & \stImpl\\
+\code{reward_agent.py} & reward/penalty/discount research engine & settlement and RL & \stGate\\
+\code{explanation_agent.py} & deterministic explanation text & final result envelope & \stImpl\\
+\code{persistence_agent.py} & saves important records & DB repository and audit & \stImpl\\
+\code{orchestrator_agent.py} & standard interval sequence & all numeric agents & \stImpl\\
+\code{substation_orchestrator.py} & substation-driven seven-step flow & context, weather, ML, DSM & \stImpl\\
+\end{longtable}
+\end{footnotesize}
+
+\subsection{Planned LLM reasoning agents}
+
+\begin{longtable}{@{}L{3.1cm}L{4.8cm}L{4.1cm}L{2.4cm}@{}}
+\caption{New agentic reasoning layer.}\label{tab:aiagents}\\
+\toprule
+\textbf{Agent} & \textbf{Allowed responsibility} & \textbf{Forbidden responsibility} &
+\textbf{Fallback}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Agent} & \textbf{Allowed responsibility} & \textbf{Forbidden responsibility} &
+\textbf{Fallback}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+AI Orchestrator & select approved tools, route around missing inputs, request review,
+explain routing & changing numeric outputs, tariffs, schedules, or control set-points &
+deterministic orchestrator\\
+AI Explanation & structured summary, evidence-linked narrative, operator recommendations &
+inventing causes, values, regulations, or confidence & deterministic explanation\\
+Anomaly Detective & interpret deterministic anomaly flags, group incidents, suggest investigation &
+being the only detector or suppressing hard-rule alerts & rule-based detector\\
+\end{longtable}
+
+\subsection{LangGraph execution design}
+
+Use a typed \code{StateGraph} with explicit START/END, conditional edges, durable checkpoints,
+bounded retries, and interrupt points for human approval. The design is:
+
+\begin{enumerate}
+  \item \textbf{Analyze context:} deterministic validation creates allowed/missing/blocked fields.
+  \item \textbf{Choose tools:} AI orchestrator selects only tools whose prerequisites are present.
+  \item \textbf{Execute tools:} numeric tools run outside the model and return typed results.
+  \item \textbf{Validate:} schema, unit, bounds, provenance, and output hash checks run.
+  \item \textbf{Assess anomaly:} hard rules/statistics flag anomalies; LLM adds explanation only.
+  \item \textbf{Apply policy:} deterministic effective-dated DSM/reward profile runs.
+  \item \textbf{Interrupt if required:} unsupported money, low confidence, policy change, or control
+        recommendation requires a human decision.
+  \item \textbf{Synthesize:} explanation agent returns strict JSON fields.
+  \item \textbf{Persist and publish:} state/checkpoint, audit, costs, and final envelope are saved.
+\end{enumerate}
+
+\subsection{Shared state and communication protocol}
+
+\begin{footnotesize}
+\begin{longtable}{@{}L{3.1cm}L{7.0cm}L{4.4cm}@{}}
+\caption{Minimum shared state contract.}\label{tab:state}\\
+\toprule
+\textbf{State group} & \textbf{Required fields} & \textbf{Writer}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{State group} & \textbf{Required fields} & \textbf{Writer}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Identity & trace ID, user/role, tenant, station/site, request timestamp & API guard\\
+Context & coordinates, timezone, units, capacity, schedule, policy ID, missing fields &
+context service\\
+Sources & source IDs, retrieval time, license, raw hash, fallback and quality status &
+source/API agents\\
+Forecast & GHI/PV/load intervals, confidence, model/formula versions & forecast tools\\
+Decision & measured actual, schedule deviation, energy gap, DSM band/amount, blocked fields &
+logic and policy tools\\
+Reasoning & route decision, explanation JSON, anomalies, recommended review & LLM agents\\
+Governance & approval, interrupt reason, retry count, token/cost, latency, final status &
+orchestrator and persistence\\
+\end{longtable}
+\end{footnotesize}
+
+Agent-to-agent communication uses state, not free-form hidden conversation. Every node appends an
+event to \code{agent_trace}; every numeric result appends source/formula/model details to
+\code{calculation_trace}. Errors are typed as retryable, fallback-eligible, review-required, or
+blocked. No agent may silently convert a blocked result into a value.
+
+\section{Data, Models, Policy, and Source Plan}
+
+\subsection{Provider and data priorities}
+
+\begin{longtable}{@{}L{3.0cm}L{3.0cm}L{5.0cm}L{3.5cm}@{}}
+\caption{Data and policy integration priority.}\label{tab:sourcesplan}\\
+\toprule
+\textbf{Source/work} & \textbf{Current state} & \textbf{Planned implementation} &
+\textbf{Required gate}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Source/work} & \textbf{Current state} & \textbf{Planned implementation} &
+\textbf{Required gate}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Open-Meteo & live weather and archive & retain as primary weather provider &
+provider SLO and cache\\
+NASA POWER & historical cross-check only & runtime historical/NRT fallback provider,
+not a day-ahead forecast substitute & latency/freshness test\\
+Solcast & not integrated & optional contracted forecast provider & contract, quota, cost\\
+NPP/Grid India reports & public reports confirmed & feasibility parser for region/state
+generation and capacity; do not assume hourly Karnataka load until inspected & schema proof\\
+KPTCL/Aikosh candidate & not verified in repo & inspect access, fields, licensing, current vs
+planned capacity, then match conservatively & source and match review\\
+Local PV actuals & absent & KPCL/BESCOM/operator data agreement and ingestion contract &
+meter semantics and consent\\
+KERC 2026 DSM & externally reported; not encoded from archived official source &
+effective-dated cumulative slab engine with source snapshot & official gazette + legal review\\
+Load model & India-wide, non-production locally & train regional then Karnataka/site model &
+chronological holdout and domain review\\
+RL policy & production blocked & offline constrained research then advisory shadow mode &
+real outcomes + approved economics\\
+\end{longtable}
+
+\subsection{KERC 2026 handling}
+
+Published reports describe a solar tolerance band of 5\%, cumulative charges of Rs.~0.25,
+Rs.~0.50, and Rs.~0.75 per unit across increasing deviation slabs, a scheduled-generation
+denominator, a deemed 1 MW schedule for zero-schedule injection, and an annual cap of 3 paise
+per unit times annual generation. These values are \textbf{requirements candidates}, not yet
+permission to emit settlement money.
+
+Before \code{emits_rupee_values=true}:
+
+\begin{enumerate}
+  \item archive the official Gazette/KERC document and checksum it;
+  \item record notification date, effective date, applicability, section/table references,
+        amendment status, and legal reviewer;
+  \item implement cumulative slab arithmetic, annual cap, interval aggregation, zero-schedule
+        handling, over/under-generation treatment, and version selection;
+  \item independently reproduce golden cases and compare against a manual worksheet;
+  \item add dual approval, rollback, and audit for rule activation.
+\end{enumerate}
+
+\section{Security, Reliability, and AI Guardrails}
+
+\begin{itemize}
+  \item OIDC/JWT authentication, RBAC, tenant and site isolation on every protected route.
+  \item Secret manager for provider and OpenRouter keys; never expose keys to browser or logs.
+  \item Request rate limits plus separate LLM token, spend, and concurrency budgets.
+  \item Tool allowlists, JSON Schema output, prompt-injection filtering, and no arbitrary code tools.
+  \item Deterministic numeric equivalence test: AI and non-AI routes return identical numeric fields.
+  \item Model/provider pinning with explicit fallback list and recorded final model ID.
+  \item LLM outage, timeout, malformed output, and budget exhaustion fall back deterministically.
+  \item Human interrupts for money activation, rule changes, low-confidence recommendations,
+        external messages, or any future control action.
+  \item Immutable audit: prompt template version, tool inputs/outputs, response schema, token usage,
+        latency, reviewer, and release version.
+  \item HTTPS, backups, restore drills, provider outage tests, SLOs, data drift, model drift,
+        and incident runbooks before pilot.
+\end{itemize}
+
+\section{Detailed Execution Roadmap}
+
+\textbf{Implementation status (this iteration).} Phases 0--4 have been implemented in
+code behind honest gates; every external-data dependency (official KERC tariff,
+KPTCL/CEA capacity, SLDC load, measured local PV) remains blocked and is represented
+by validated-but-empty machinery rather than fabricated values. Test coverage added:
+\code{test\_phase0\_foundation.py} (6), \code{test\_phase1\_providers\_kerc.py} (11),
+\code{test\_ai\_reasoning\_layer.py} (7), \code{test\_phase2\_data\_pipeline.py} (9),
+\code{test\_phase3\_model\_rl\_gates.py} (4), \code{test\_phase4\_auth\_alerts\_connector.py}
+(10). Phase 5 (controlled pilot) remains future work pending pilot-site data access.
+
+\subsection{Phase 0 - Foundation hardening (Week 1)} \textbf{[DONE]}
+
+\textbf{Work items}
+\begin{enumerate}
+  \item Enforce \code{APP_DATA_MODE} on every API and background job. Real mode forbids silent
+        synthetic fallback; clear-sky physics is labelled separately.
+  \item Unify the source registry and model-card provenance into one \code{SourceRecord} contract.
+  \item Verify Docker Compose end-to-end, health checks, migrations, backend tests, frontend build,
+        and evidence log.
+  \item Quarantine unsupported monetary defaults and add a test that forbids unapproved currency.
+\end{enumerate}
+
+\textbf{Deliverables:} data-mode behavior matrix, unified registry, no-orphan-source tests,
+Docker verification log, and unchanged 118-test baseline or better.
+
+\subsection{Phase 1 - Provider and regulation integration (Weeks 2--3)} \textbf{[DONE, gated]}
+
+\textbf{NASA POWER}
+\begin{itemize}
+  \item Add \code{app/providers/nasa_power.py} behind \code{WeatherProvider}.
+  \item Map GHI, temperature, humidity, wind, and pressure; use explicit UTC/LST conversion.
+  \item Cache responses, record freshness, and use it for historical fill/NRT fallback.
+  \item Cross-validate against Open-Meteo; never call reanalysis a live forecast.
+\end{itemize}
+
+\textbf{KERC rule parser}
+\begin{itemize}
+  \item Add effective-dated \code{kerc_dsm_2026.py} only after the official-source gate.
+  \item Support cumulative slabs, annual cap, deemed schedule, applicability, and source citations.
+  \item Add scenario tests, manual reproduction, frontend attribution, and rollback.
+\end{itemize}
+
+\subsection{Phase 1.5 - Real agentic reasoning layer (Weeks 3--4)} \textbf{[DONE]}
+
+\begin{itemize}
+  \item Add \code{langgraph}, \code{langchain-core}, and the selected OpenAI-compatible client.
+  \item Create \code{app/agents/ai/state.py}, \code{tools.py}, \code{orchestrator.py},
+        \code{explanation.py}, \code{anomaly_detective.py}, prompts, and policies.
+  \item Add \code{/api/v1/orchestrate/substation/ai} beside the deterministic route.
+  \item Add strict structured output, durable checkpointing, retry limits, and approval interrupts.
+  \item Add \code{AIInsightsPanel}, anomaly/alert UI, and reasoning trace display.
+  \item Prove numeric equivalence and deterministic fallback under LLM failure.
+\end{itemize}
+
+\subsection{Phase 2 - Data acquisition and enrichment (Weeks 5--6)} \textbf{[SCHEMA/PARSER DONE; external data blocked]}
+
+\begin{itemize}
+  \item Inspect NPP/Grid India report files before defining granularity; build fixture-driven parser.
+  \item Obtain regional/Karnataka load from a source that actually exposes required intervals.
+  \item Inspect KPTCL/Aikosh or official KPTCL/CEA capacity sources; distinguish planned augmentation
+        from commissioned capacity.
+  \item Match stations by normalized name, operator, voltage, and geography with manual review.
+  \item Begin local PV data requests to KPCL, BESCOM, and willing plant operators.
+  \item Prepare a local-PV ingestion schema for timestamp, AC/DC power, irradiance, inverter state,
+        quality flag, and meter provenance.
+\end{itemize}
+
+\subsection{Phase 3 - Model rebuild and gated RL (Weeks 7--10)} \textbf{[GATES AUDITED; RL stays blocked]}
+
+\begin{itemize}
+  \item Train regional load with chronological splits and compare against the national baseline.
+  \item Train site-level PV only when measured site truth and configuration are sufficient.
+  \item Calibrate intervals, bias, drift, and seasonal/site performance; produce model cards.
+  \item Build an RL environment from approved data. Estimated PV may support research but can never
+        make the policy production-ready.
+  \item Compare RL with no-action and deterministic baselines; require zero safety violations.
+  \item Promote agent status only when its own evidence and acceptance gate passes.
+\end{itemize}
+
+\subsection{Phase 4 - Product integration and hardening (Weeks 10--14)} \textbf{[DONE, flag-gated; deploy verify host-blocked]}
+
+\begin{itemize}
+  \item Complete OIDC/JWT, RBAC, tenant isolation, rate limits, audit, and spend controls.
+  \item Make station selection a shared frontend context that drives every relevant page/card.
+  \item Add alerts, acknowledgment, explanation provenance, and blocked-reason UX.
+  \item Implement one read-only plant connector and a replay environment; no control commands.
+  \item Verify HTTPS, actual deployment topology, backups, restore, CI/CD, metrics, traces, and SLOs.
+\end{itemize}
+
+\subsection{Phase 5 - Controlled pilot (Weeks 15--22)} \textbf{[FUTURE - needs pilot-site data access]}
+
+\begin{itemize}
+  \item Run a 1--3-site shadow pilot for at least 2--4 weeks.
+  \item Compare forecast, schedule, measured actual, policy result, and operator decision.
+  \item Review every alert, blocked result, model drift event, and LLM fallback.
+  \item If RL passed its gate, show advice only; record human acceptance/rejection and outcome.
+  \item Conduct incident, provider outage, backup/restore, policy rollback, and security drills.
+  \item Hold a go/extend/stop production-readiness review with accepted residual risks.
+\end{itemize}
+
+\section{Timeline and Milestones}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.48cm,y=0.60cm]
+\def\xoff{5.6}
+\foreach \w in {0,2,...,22} {
+  \draw[grid,thin] (\xoff+\w,0.2) -- (\xoff+\w,8.8);
+  \node[font=\tiny,text=muted] at (\xoff+\w,9.15) {\w};
+}
+\node[font=\scriptsize\bfseries,text=muted,anchor=east] at (\xoff-0.3,9.15) {Week};
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,8.2) {Foundation};
+\fill[blue,rounded corners=1pt] (\xoff,7.9) rectangle (\xoff+2,8.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,7.2) {Providers/regulation};
+\fill[red,rounded corners=1pt] (\xoff+2,6.9) rectangle (\xoff+6,7.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,6.2) {Agentic layer};
+\fill[violet,rounded corners=1pt] (\xoff+3,5.9) rectangle (\xoff+8,6.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,5.2) {Data acquisition};
+\fill[green,rounded corners=1pt] (\xoff+5,4.9) rectangle (\xoff+10,5.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,4.2) {ML/RL research};
+\fill[amber,rounded corners=1pt] (\xoff+7,3.9) rectangle (\xoff+12,4.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,3.2) {Product hardening};
+\fill[cyan,rounded corners=1pt] (\xoff+10,2.9) rectangle (\xoff+15,3.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,2.2) {External data track};
+\fill[green!70!black,rounded corners=1pt] (\xoff+2,1.9) rectangle (\xoff+19,2.5);
+\node[font=\scriptsize,anchor=east] at (\xoff-0.3,1.2) {Shadow pilot};
+\fill[navy,rounded corners=1pt] (\xoff+15,0.9) rectangle (\xoff+23,1.5);
+\end{tikzpicture}
+\caption{Integrated engineering and controlled-pilot schedule. The 10-week build track is inside
+the 22-week evidence and pilot track.}
+\end{figure}
+
+\begin{footnotesize}
+\begin{longtable}{@{}L{1.5cm}L{4.2cm}L{6.4cm}L{2.5cm}@{}}
+\caption{Milestones and decision gates.}\label{tab:milestones}\\
+\toprule
+\textbf{Week} & \textbf{Milestone} & \textbf{Success criterion} & \textbf{Decision}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Week} & \textbf{Milestone} & \textbf{Success criterion} & \textbf{Decision}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & M0 Foundation & real-mode audit, registry design, Docker evidence, all tests/build pass &
+engineering gate\\
+3 & M1 Providers/rules & NASA provider validated; KERC source archived and golden cases reviewed &
+source/legal gate\\
+4 & M2 Agentic route & AI route returns schema-valid reasoning and identical numeric output;
+fallback proven & safety gate\\
+6 & M3 Data feasibility & inspected source files; coverage, interval, license, and quality report &
+data gate\\
+10 & M4 Model/RL research & signed model cards; RL beats baseline offline with zero safety breach &
+research gate\\
+14 & M5 Pilot-ready & auth/isolation, UI connection, read-only connector, SLO/restore drills &
+operational gate\\
+22 & M6 Pilot decision & shadow metrics, operator sign-off, incidents and residual risks reviewed &
+go/extend/stop\\
+\end{longtable}
+\end{footnotesize}
+
+\section{Standard Implementation Workflow}
+
+Every roadmap item follows the same evidence chain:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=5mm]
+\node[component] (research) {1. Research\\source, law, schema};
+\node[component, right=of research] (design) {2. Design\\contract, risks, tests};
+\node[component, right=of design] (implement) {3. Implement\\provider, agent, UI};
+\node[component, right=of implement] (verify) {4. Verify\\unit, integration, E2E};
+\node[component, right=of verify] (publish) {5. Publish\\docs, card, trace};
+\draw[flow] (research) -- (design);
+\draw[flow] (design) -- (implement);
+\draw[flow] (implement) -- (verify);
+\draw[flow] (verify) -- (publish);
+\end{tikzpicture}
+\caption{Required implementation workflow for every change.}
+\end{figure}
+
+\section{Testing and Acceptance}
+
+\begin{itemize}
+  \item \textbf{Regression:} current 118 tests, Ruff, and frontend build remain green.
+  \item \textbf{Provider contract:} fixtures, timezones, units, missing data, retries, cache, drift.
+  \item \textbf{Policy:} official-source golden cases, boundaries, cumulative slabs, cap, rollback.
+  \item \textbf{Agentic:} tool allowlist, prompt injection, structured output, numeric equivalence,
+        deterministic fallback, checkpoint/resume, human interrupt, spend limit.
+  \item \textbf{Data quality:} coverage, freshness, duplicates, gaps, license, geography, domain shift.
+  \item \textbf{ML:} chronological holdout, baseline comparison, calibration, season/site slices, drift.
+  \item \textbf{RL:} offline only, deterministic baseline, stress cases, constraints, no unsafe action.
+  \item \textbf{Frontend/backend:} contract tests for all client functions and page workflows.
+  \item \textbf{Security/operations:} auth, tenant isolation, secrets, rate limits, HTTPS, restore,
+        provider outage, rollback, load, SLO and incident drills.
+\end{itemize}
+
+\section{Cost and Capacity Planning}
+
+Do not hardcode current model prices or model IDs in application logic. Select models from a
+capability policy that requires tool calling, structured output, latency, geography/privacy,
+availability, and budget. Record the actual model returned by the provider.
+
+For planning:
+
+\[
+\text{daily LLM cost} =
+\sum_a \left(
+  \text{calls}_a \times
+  \frac{\text{input tokens}_a \times p_{in,a} +
+        \text{output tokens}_a \times p_{out,a}}{10^6}
+\right)
+\]
+
+The supplied usage assumption of roughly 50 orchestrations, 50 explanations, and 24 anomaly
+reviews per day is a \textbf{pilot scenario}, not measured traffic. Add cache-hit rate, retries,
+provider fallback, and a 30--50\% contingency. Set daily and monthly hard budgets; when exhausted,
+fall back to deterministic output.
+
+\section{Risks and Honest End State}
+
+\begin{footnotesize}
+\begin{longtable}{@{}L{3.6cm}L{4.1cm}L{6.9cm}@{}}
+\caption{Principal execution risks.}\label{tab:risks}\\
+\toprule
+\textbf{Risk} & \textbf{Effect} & \textbf{Response}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Risk} & \textbf{Effect} & \textbf{Response}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Official KERC text or interpretation changes & wrong monetary output &
+effective-dated rules, archived source, legal review, no-money default, rollback\\
+NPP files lack required load granularity & load pipeline blocked &
+inspect first; obtain SLDC/site agreement; do not interpolate false hourly truth\\
+Capacity dataset is planned work, not commissioned state & wrong station loading &
+source classification, commissioning evidence, confidence and manual review\\
+Local PV partnership fails & no production PV/RL validation &
+retain estimate label; continue decision-support pilot without production RL\\
+LLM changes numbers or invents evidence & unsafe decisions &
+typed tools, immutable outputs, strict JSON, equivalence tests, deterministic fallback\\
+Prompt injection or secret leakage & data/security incident &
+allowlists, input separation, no secret in prompts, output validation, audit\\
+Provider/model price or availability changes & cost/outage &
+model policy, pinned tested options, fallback list, budgets, cache\\
+Frontend and backend contracts diverge & broken operator workflow &
+generated schemas, contract tests, one shared station context, CI build gate\\
+Managed AWS is assumed deployed from Terraform & false readiness claim &
+verify actual topology; label code-only infrastructure until observed\\
+\end{longtable}
+\end{footnotesize}
+
+After the plan, the system may still honestly report the following as pending: real-time
+KPTCL/SLDC telemetry without an agreement, on-site pyranometer validation, full local PV and load
+coverage, inter-state CERC settlement handling, autonomous control, and production RL. These are
+not documentation failures; they are evidence gates.
+
+\section{Immediate Team Actions}
+
+\begin{enumerate}
+  \item Approve this architecture and make it the source of truth for implementation.
+  \item Run the route-by-route \code{APP_DATA_MODE} and unsupported-currency audits.
+  \item Verify Docker Compose and record container evidence.
+  \item Implement NASA POWER as a historical/NRT fallback with explicit freshness semantics.
+  \item Archive and legally review the official KERC 2026 source before enabling any rupee output.
+  \item Create the typed LangGraph state/tool contracts and a deterministic-equivalence test first.
+  \item Inspect candidate NPP and KPTCL/Aikosh files before committing to schemas or schedules.
+  \item Send local PV data requests immediately because this is the longest external dependency.
+\end{enumerate}
+
+\section{External Technical References}
+
+\begin{itemize}
+  \item GitHub repository: \url{https://github.com/DBIT-Banglore/SuryaGrid}
+  \item LangGraph: \url{https://github.com/langchain-ai/langgraph}
+  \item OpenRouter API: \url{https://openrouter.ai/docs/api/reference/overview}
+  \item OpenRouter tool calling: \url{https://openrouter.ai/docs/guides/features/tool-calling}
+  \item NASA POWER temporal API: \url{https://power.larc.nasa.gov/docs/services/api/temporal/}
+  \item National Power Portal published reports: \url{https://www.npp.gov.in/publishedReports}
+  \item Karnataka Electricity Regulatory Commission: \url{https://kerc.karnataka.gov.in/}
+\end{itemize}

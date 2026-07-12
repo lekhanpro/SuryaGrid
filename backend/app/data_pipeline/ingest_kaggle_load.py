@@ -18,7 +18,9 @@ from app.data_pipeline import _common as C
 from app.ml import provenance as prov
 
 SLUG = "shubhamvashisht/hourly-load-india-electrical-load-forecasting"
-URL = "https://www.kaggle.com/datasets/shubhamvashisht/hourly-load-india-electrical-load-forecasting"
+URL = (
+    "https://www.kaggle.com/datasets/shubhamvashisht/hourly-load-india-electrical-load-forecasting"
+)
 OUT = "kaggle_load_processed.parquet"
 XLSX = "load/hourly_load_india/hourlyLoadDataIndia.xlsx"
 
