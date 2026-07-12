@@ -1,0 +1,412 @@
+\documentclass[10pt,a4paper]{article}
+\newcommand{\ReportShortTitle}{FULL PROJECT DOSSIER}
+\input{suryagrid_report_preamble.tex}
+
+\hypersetup{
+  pdftitle={SuryaGrid AI - Full Implementation History and Execution Dossier},
+  pdfauthor={SuryaGrid Project Team},
+  pdfsubject={Day-by-day and commit-by-commit implementation history followed by the complete execution and agentic architecture}
+}
+
+\begin{document}
+\teamtitlepage
+  {Full Project Dossier}
+  {Implemented History First, Then Complete Execution and Agentic Architecture}
+  {A team-owned record of what was implemented, when it entered the repository, how the current
+  frontend/backend/agent system connects, and the complete controlled path forward.}
+
+\tableofcontents
+\newpage
+
+\part{Everything Implemented to Date}
+
+\section{Verification Basis}
+
+This dossier uses the following evidence hierarchy:
+
+\begin{enumerate}
+  \item the current local checkout at \code{main} commit \code{5bed3cd};
+  \item a fresh fetch from both configured GitHub remotes;
+  \item the GitHub repository commit list and pull-request metadata;
+  \item full local commit messages, file lists, and change statistics;
+  \item current code, routes, agents, data/model metadata, tests, and frontend build;
+  \item the existing evidence matrix and technical reports.
+\end{enumerate}
+
+\begin{callout}{Repository history scope}
+The main branch contains \textbf{37 commits} from 20 June through 7 July 2026. The fetched object
+graph contains \textbf{39 unique commits}: the 37 main commits plus two side-branch commits not
+merged into main. The implementation history below records all 37 main commits and identifies the
+two non-main objects separately.
+\end{callout}
+
+\subsection{Current verified totals}
+
+\begin{longtable}{@{}L{4.2cm}L{3.0cm}L{7.4cm}@{}}
+\caption{Current verified project baseline on 9 July 2026.}\label{tab:verifiedtotals}\\
+\toprule
+\textbf{Measure} & \textbf{Verified value} & \textbf{Evidence}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Measure} & \textbf{Verified value} & \textbf{Evidence}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Main-branch commits & 37 & \code{git rev-list main --count}; GitHub main at \code{5bed3cd}\\
+Unique fetched commits & 39 & \code{git rev-list --all --count}\\
+Merged development PRs & 8 & GitHub PRs 2 through 9\\
+Backend route operations & 61 & FastAPI route table under \code{/api/v1}\\
+Agent modules & 17 & \code{backend/app/agents/*.py}, excluding \code{__init__.py}\\
+Frontend feature routes & 12 & page directories under \code{frontend/app}\\
+Generated frontend pages & 16 & Next.js production build output, including root and framework pages\\
+Backend tests & 118 passed & \code{python -m pytest tests -q}, 19.30 seconds\\
+Backend lint & all passed & \code{python -m ruff check app tests}\\
+Frontend build & passed & Next.js 14.2.35 compile, type check, and static generation\\
+Substation records & 344 & committed OSM-derived Bengaluru/Karnataka parquet\\
+Current branch & \code{main} & both \code{origin/main} and \code{dbit/main} at \code{5bed3cd}\\
+\end{longtable}
+
+\section{Current Implemented System}
+
+\subsection{Backend}
+
+\begin{itemize}
+  \item FastAPI application with health, weather, sites, predictions, timelines, energy,
+        settlement, RL, Karnataka, source, ML, agent, location, DSM, system, Kaggle, and
+        substation-orchestration route groups.
+  \item SQLAlchemy async persistence with SQLite default and PostgreSQL support; Alembic migrations,
+        repositories, audit/training/settlement records, and health record counts.
+  \item Redis integration for cache/rate state, provider status, and optional scheduled ingestion.
+  \item Open-Meteo live/current/archive integration and pvlib solar position, transposition,
+        cell-temperature, PVWatts, clear-sky, and Erbs decomposition paths.
+  \item Deterministic energy, DSM, risk, fuzzy-risk, reward/settlement research, RL environment,
+        provider/API management, and multi-agent orchestration.
+  \item Real-data ML build/train/inference pipelines with provenance, quality, model registry,
+        cards, training manifests, and reproducible Kaggle ingestion.
+  \item Substation-driven context service and five dedicated endpoints that pass the selected
+        substation through weather, solar, cloud, generation, and DSM.
+\end{itemize}
+
+\subsection{Frontend}
+
+\begin{itemize}
+  \item Next.js 14 App Router with dashboard, predictions, timeline, energy, settlement, RL, Karnataka,
+        locations, DSM, ML, data-sources, and system pages.
+  \item A shared typed client in \code{frontend/lib/api.ts} with backend probe/offline handling and
+        functions covering the 61-operation backend surface.
+  \item Dark glass design system, metric/penalty cards, deviation/timeline charts, 3D SVG solar,
+        energy-flow, and risk visuals, topbar/sidebar, and explicit backend-offline state.
+  \item Substation workflow panel wired into Locations and DSM; model provenance and source status
+        panels; Karnataka and RL views.
+\end{itemize}
+
+\subsection{Data and models}
+
+\begin{itemize}
+  \item Open-Meteo Bengaluru historical weather, NASA POWER cross-check, OSM substations, India
+        national/regional load references, and multiple Kaggle solar/PV/load datasets.
+  \item Production-marked irradiance and cloud-risk models with cards; DSM-breach decision support.
+  \item Kaggle Bengaluru irradiance and cloud models; India PV/load models retained as non-local,
+        non-production evidence because of domain shift.
+  \item RL artifacts and research environments exist, but the authoritative production card is
+        blocked for insufficient real local load, economics, and PV outcomes.
+\end{itemize}
+
+\subsection{Infrastructure and operations}
+
+\begin{itemize}
+  \item Dockerfiles and Docker Compose for frontend, backend, PostgreSQL, and Redis.
+  \item GitHub Actions for backend tests, lint/format, frontend build, Pages, and an AWS CD path.
+  \item Terraform for VPC, ECS/Fargate, RDS, ElastiCache, S3, CloudFront, security groups, and outputs.
+  \item Single-instance Ubuntu deployment scripts, port changes, Nginx/subdomain configuration, and
+        documentation. Managed AWS remains code-only until deployment is observed.
+\end{itemize}
+
+\section{Day-by-Day Implementation Record}
+
+\subsection{20 June 2026 - Phase 1 MVP and first product surface}
+
+\textbf{Five commits:} \code{6d08097}, \code{957f146}, \code{d4b484f},
+\code{7e46fd8}, \code{6e85caf}.
+
+\begin{itemize}
+  \item Created the initial 94-file Phase 1 repository: solar nowcasting, DSM penalty prediction,
+        fuzzy-risk engine, FastAPI backend, Next.js frontend, schemas, tests, documentation,
+        Docker/development assets, and the initial implementation plan.
+  \item Rebuilt the dashboard with metric cards, penalty status, deviation bars, timeline charts,
+        badges, page navigation, and a professional data-display hierarchy.
+  \item Added the animated 3D SVG solar panel, risk gauge, energy-flow visualization, glassmorphism
+        theme, responsive layout, and design tokens.
+  \item Added static export, a labelled client-side demonstration engine, GitHub Pages workflow,
+        and startup support.
+  \item Removed temporary/scratch artifacts as the first cleanup step.
+\end{itemize}
+
+\textbf{Day outcome:} a complete demonstrable MVP and visual product shell existed, but its core
+data path was still primarily toy/synthetic and not yet the later real-data architecture.
+
+\subsection{24 June 2026 - UI consolidation}
+
+\textbf{One commit:} \code{e092af5}.
+
+\begin{itemize}
+  \item Unified predictions and timeline pages into the dark glass system and removed broken
+        light-theme class dependencies.
+  \item Consolidated global card, badge, table, button, scrollbar, and animation styles.
+  \item Added the Topbar, live/demo connection indicator, typography, landing-page feature
+        highlights, and consistent metric/deviation/penalty components.
+\end{itemize}
+
+\textbf{Day outcome:} the frontend became one coherent application instead of visually separate
+pages.
+
+\subsection{26 June 2026 - Real physics, CI/CD, settlement, and RL foundation}
+
+\textbf{Thirteen commits, including six feature/fix commits and their merge commits.}
+
+\begin{enumerate}
+  \item \textbf{Runtime correctness and root serving} (\code{3627938}, merged by \code{016b41c}):
+        fixed stale Redis health reporting, served the dashboard at root, removed the obsolete
+        Pages workflow at that point, and updated run documentation.
+  \item \textbf{Continuous integration} (\code{b872d09}, merged by \code{bb62673}):
+        added Python 3.12 backend tests and Node 20 frontend build/type-check jobs.
+  \item \textbf{Real nowcasting pipeline} (\code{5054782}, merged by \code{f13bc3d}):
+        replaced the toy numeric path with Open-Meteo weather and pvlib physics; implemented
+        solar position, POA, cell temperature, PVWatts DC/AC, clear-sky scheduling, excess-band
+        DSM charging, deterministic risk, real weather/timeline APIs, and live frontend calls.
+  \item \textbf{CI/CD hardening} (\code{6d7cf77}, \code{b283903}, merged by \code{8bb5e0a}):
+        added Ruff lint/format, static-artifact validation, Pages deployment after CI, base-path
+        detection, live URL verification, robust route-registration tests, and deployment docs.
+  \item \textbf{Irradiance decomposition} (\code{a107eea}, merged by \code{3950741}):
+        added automatic pvlib Erbs GHI-to-DNI/DHI fallback for providers without beam/diffuse data,
+        while preserving measured DNI/DHI when available.
+  \item \textbf{Full main-plan foundation} (\code{02ed09a}, merged by \code{70c75cd}):
+        added reward/penalty/discount settlement research, energy balance, consumption profiles,
+        provider rotation/quota tracking, RL digital twin and REINFORCE policy, policy weights,
+        settlement/RL/energy APIs, and tests.
+\end{enumerate}
+
+\textbf{Day outcome:} SuryaGrid moved from a visual/toy MVP to a real-weather, physics-based,
+continuously tested platform with the first complete deterministic decision loop and RL research
+foundation.
+
+\subsection{27 June 2026 - Persistence, Karnataka integration, real-time ingestion}
+
+\textbf{Four commits:} \code{5ce7bfe}, \code{56beb46}, \code{f30e504}, \code{6bb54f8}.
+
+\begin{itemize}
+  \item Added persistent async SQLAlchemy storage, portable GUIDs, the project ER model,
+        repositories, startup initialization, migrations, and health record counts.
+  \item Added Open-Meteo archive ingestion and a real-data RL training path over historical
+        irradiance-derived production; persisted training runs.
+  \item Added Energy Balance, Settlement Engine, and RL Lab frontend pages and client contracts.
+  \item Added multi-year archive windows, current weather, current ingestion, and opt-in APScheduler.
+  \item Added Karnataka solar-site presets, seed/region endpoints, a BESCOM connector framework,
+        Karnataka DSM framework, related APIs, and a Karnataka page.
+  \item Kept the BESCOM/SLDC connector explicitly simulated until real metered access exists.
+\end{itemize}
+
+\textbf{Day outcome:} the system acquired persistence, historical training, real-time ingestion,
+Karnataka-specific surfaces, and operational research workflows.
+
+\subsection{6 July 2026 - Phase 1.7 real-data and honest ML rebuild}
+
+\textbf{One major commit:} \code{95fb856}; 113 files changed.
+
+\begin{itemize}
+  \item Built a provenance-first data platform with source status, geography, data mode, domain
+        shift, quality score, model cards, training manifests, and source registries.
+  \item Built 26,304 hours of Bengaluru weather/solar history, a NASA POWER cross-check, 344 OSM
+        substations, India load references, and solar/cloud/DSM/load training sets.
+  \item Added solar, cloud-risk, DSM-breach, and load training/inference agents and endpoints.
+  \item Marked local-unfit load/PV and RL honestly as non-production or blocked instead of
+        promoting them from code existence alone.
+  \item Added source, DSM, ML, agent, location, system, persistence, feature-engineering, and API
+        management modules plus 16 Phase 1.7 tests.
+\end{itemize}
+
+\textbf{Day outcome:} the architecture became explicitly evidence-driven. ``Real'' was separated
+from ``local'', ``estimated'', ``synthetic'', ``unavailable'', and ``production-ready''.
+
+\subsection{7 July 2026 - Kaggle ML, AWS assets, deployment, evidence reports, substations}
+
+\textbf{Thirteen commits on main.}
+
+\begin{enumerate}
+  \item \textbf{AWS architecture} (\code{507c6be}): Terraform for VPC, ECS/Fargate, RDS,
+        ElastiCache, S3/CloudFront, security groups; AWS deployment workflow and architecture,
+        app-flow, and deployment docs.
+  \item \textbf{Single-instance deployment evolution} (\code{1070a11}, \code{d4c7e62},
+        \code{5c158c1}, \code{7c0f22e}, \code{a17e3ef}, \code{04f61d5}): memory optimization for
+        a small host, one-click Ubuntu deploy, backend port 8080, Nginx/subdomain attempts,
+        direct-frontend fallback, and subdomain setup.
+  \item \textbf{Code/data support} (\code{9b1c7eb}, \code{9efbe28}): formatted ML files and added
+        a Kaggle download helper.
+  \item \textbf{Kaggle real-data pipeline} (\code{16e6a4e}): ingested PV, Bengaluru irradiance,
+        cloud-risk, and India load datasets; built four prefixed models/cards; added Kaggle APIs,
+        tests, evidence docs, and an implementation report.
+  \item \textbf{History integration} (\code{df372d2}): merged deployment/infra work with the
+        Phase 1.7 Kaggle line.
+  \item \textbf{Evidence report} (\code{360615f}): added the final technical report, evidence
+        matrix, formula/DSM source documents, and hosted-app verification.
+  \item \textbf{Substation-driven workflow} (\code{5bed3cd}): made a selected substation the
+        central context; added context schema/service, seven-step orchestrator, five endpoints,
+        15 tests, frontend workflow panel, agent/calculation trace, honest blocking, and committed
+        the small OSM/grid feature parquets.
+\end{enumerate}
+
+\textbf{Day outcome:} the current \code{main} baseline was established: 61 APIs, 118 tests,
+real-data model provenance, substation-driven orchestration, deployment options, and detailed
+evidence documentation.
+
+\section{Implemented Workflow as of the Baseline}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[node distance=6mm]
+\node[component] (ui) {Next.js UI\\station/site selection};
+\node[component, right=of ui] (api) {Typed client\\FastAPI routes};
+\node[agent, right=of api] (context) {Context and\\source registry};
+\node[agent, right=of context] (weather) {Weather\\Open-Meteo / clear-sky};
+\node[agent, below=8mm of weather] (solar) {Solar irradiance\\and PV forecast};
+\node[agent, left=of solar] (cloud) {Cloud-risk\\classifier};
+\node[agent, left=of cloud] (timeline) {Generation\\timeline};
+\node[agent, left=of timeline] (dsm) {DSM and\\risk assessment};
+\node[agent, below=8mm of cloud] (trace) {Orchestrator\\trace and blocks};
+\node[store, left=of trace] (persist) {DB, model cards,\\provenance};
+\node[component, left=of persist] (result) {API result\\cards and charts};
+
+\draw[flow] (ui) -- (api);
+\draw[flow] (api) -- (context);
+\draw[flow] (context) -- (weather);
+\draw[flow] (weather) -- (solar);
+\draw[flow] (solar) -- (cloud);
+\draw[flow] (cloud) -- (timeline);
+\draw[flow] (timeline) -- (dsm);
+\draw[flow] (dsm) |- (trace);
+\draw[dataflow] (trace) -- (persist);
+\draw[flow] (persist) -- (result);
+\end{tikzpicture}}
+\caption{Current implemented substation/site decision-support loop.}
+\end{figure}
+
+Current honest limits:
+
+\begin{itemize}
+  \item substation capacity is unavailable for all 344 OSM records;
+  \item local measured PV and feeder/substation load are not connected;
+  \item PV output is estimated from irradiance and configuration;
+  \item official monetary DSM activation is pending source/version review;
+  \item the production RL card remains blocked;
+  \item authentication, tenant enforcement, alert delivery, read-only plant integration,
+        HTTPS/operations evidence, and managed AWS deployment remain incomplete or unverified.
+\end{itemize}
+
+\section{Pull-Request and Branch Record}
+
+\begin{longtable}{@{}C{1.2cm}L{5.2cm}L{5.0cm}L{3.5cm}@{}}
+\caption{GitHub pull-request record relevant to main.}\label{tab:prs}\\
+\toprule
+\textbf{PR} & \textbf{Title / scope} & \textbf{Result} & \textbf{Main merge}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{PR} & \textbf{Title / scope} & \textbf{Result} & \textbf{Main merge}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+2 & Redis health and root path & merged & \code{016b41c}\\
+3 & CI backend tests and frontend build & merged & \code{bb62673}\\
+4 & Real Open-Meteo + pvlib nowcasting and DSM & merged & \code{f13bc3d}\\
+5 & Harden CI/CD and Pages & merged & \code{8bb5e0a}\\
+6 & Erbs fallback for GHI-only data & merged & \code{3950741}\\
+7 & Settlement, energy balance, API agent, RL & merged & \code{70c75cd}\\
+8 & Persistent DB, historical RL, new UI & merged & \code{56beb46}\\
+9 & Karnataka/BESCOM, multi-year and current ingestion & merged & \code{6bb54f8}\\
+10 & CodeRabbit-generated unit-test branch & open; not in main & side commit \code{32eec8a}\\
+\end{longtable}
+
+\section{Complete Main-Branch Commit Ledger}
+
+\begin{footnotesize}
+\begin{longtable}{@{}C{1.9cm}C{2.1cm}L{6.0cm}L{5.1cm}@{}}
+\caption{All 37 commits on main, in chronological order.}\label{tab:commits}\\
+\toprule
+\textbf{Commit} & \textbf{Date} & \textbf{Repository summary} & \textbf{Implementation meaning}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Commit} & \textbf{Date} & \textbf{Repository summary} & \textbf{Implementation meaning}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\code{6d08097} & 20 Jun & Phase 1 complete MVP & Initial backend, frontend, agents, DSM/fuzzy risk, tests, docs\\
+\code{957f146} & 20 Jun & Frontend UI overhaul & Dashboard, cards, deviation and timeline visuals\\
+\code{d4b484f} & 20 Jun & Temporary-file cleanup & Repository hygiene\\
+\code{7e46fd8} & 20 Jun & 3D SVG/glass UI & Solar, risk, energy visuals and theme\\
+\code{6e85caf} & 20 Jun & GitHub Pages and mock engine & Static demonstration/deployment path\\
+\code{e092af5} & 24 Jun & Cohesive dark glass UI & Design-system and page unification\\
+\code{3627938} & 26 Jun & Redis health/root fix & Correct live health and root serving\\
+\code{016b41c} & 26 Jun & Merge PR 2 & Integrated runtime fix\\
+\code{b872d09} & 26 Jun & CI workflow & Backend tests and frontend build\\
+\code{bb62673} & 26 Jun & Merge PR 3 & Integrated CI\\
+\code{5054782} & 26 Jun & Real nowcasting + DSM & Open-Meteo, pvlib, real timeline, deterministic risk\\
+\code{f13bc3d} & 26 Jun & Merge PR 4 & Integrated real nowcasting\\
+\code{6d7cf77} & 26 Jun & Harden CI/CD and Pages & Ruff, artifact/live checks, deployment docs\\
+\code{b283903} & 26 Jun & OpenAPI route test fix & FastAPI-version-stable route verification\\
+\code{8bb5e0a} & 26 Jun & Merge PR 5 & Integrated hardened pipeline\\
+\code{a107eea} & 26 Jun & Erbs GHI fallback & Physically valid DNI/DHI derivation\\
+\code{3950741} & 26 Jun & Merge PR 6 & Integrated Erbs fallback\\
+\code{02ed09a} & 26 Jun & Full platform foundation & Settlement, reward, energy, RL, API agent\\
+\code{70c75cd} & 26 Jun & Merge PR 7 & Integrated full-platform modules\\
+\code{5ce7bfe} & 27 Jun & Persistence, historical RL, new UI & DB, archive training, energy/settlement/RL pages\\
+\code{56beb46} & 27 Jun & Merge PR 8 & Integrated persistent data/UI\\
+\code{f30e504} & 27 Jun & Karnataka/BESCOM and current data & Multi-year/current ingestion and state workflow\\
+\code{6bb54f8} & 27 Jun & Merge PR 9 & Integrated Karnataka expansion\\
+\code{95fb856} & 6 Jul & Phase 1.7 real-data ML & Provenance-first datasets, agents, cards, honest gates\\
+\code{507c6be} & 7 Jul & AWS IaC and documentation & ECS/RDS/Redis/S3/CloudFront intended stack\\
+\code{1070a11} & 7 Jul & 2 GB host optimization & Small-instance Compose tuning\\
+\code{d4c7e62} & 7 Jul & Ubuntu deploy script & One-command server deployment workflow\\
+\code{5c158c1} & 7 Jul & Backend port 8080 & Host/proxy port alignment\\
+\code{7c0f22e} & 7 Jul & Nginx proxy & Subdomain reverse-proxy attempt\\
+\code{a17e3ef} & 7 Jul & Direct frontend fallback & Resolved port-80 conflict path\\
+\code{04f61d5} & 7 Jul & Subdomain setup & Nginx site automation\\
+\code{9b1c7eb} & 7 Jul & ML formatting & Ruff code-format cleanup\\
+\code{9efbe28} & 7 Jul & Kaggle download helper & Dataset acquisition support\\
+\code{16e6a4e} & 7 Jul & Kaggle pipeline/models/report & Four datasets/models, APIs, cards, evidence\\
+\code{df372d2} & 7 Jul & History merge & Combined infrastructure and Kaggle lines\\
+\code{360615f} & 7 Jul & Evidence-based final report & Hosted/repository verification and formula sources\\
+\code{5bed3cd} & 7 Jul & Substation-driven workflow & Context, orchestration, endpoints, UI panel, 118-test baseline\\
+\end{longtable}
+\end{footnotesize}
+
+\subsection{Fetched commits not in main}
+
+\begin{itemize}
+  \item \code{85c7753}: side-branch CI commit associated with the Redis/root-path branch history.
+  \item \code{32eec8a}: CodeRabbit-generated tests on open PR 10; not merged into main.
+\end{itemize}
+
+\section{Current Verification Result}
+
+On 9 July 2026, the current checkout was revalidated:
+
+\begin{itemize}
+  \item \code{python -m pytest tests -q}: \textbf{118 passed}.
+  \item \code{python -m ruff check app tests}: \textbf{all checks passed}.
+  \item \code{npm run build}: \textbf{compiled, linted, type-checked, and generated 16 pages}.
+\end{itemize}
+
+This verifies the current repository baseline. It does not automatically verify production
+uptime, official regulatory interpretation, external datasets not committed to the repository,
+managed AWS deployment, or real plant telemetry.
+
+\clearpage
+\input{suryagrid_execution_architecture_body.tex}
+
+\end{document}

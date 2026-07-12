@@ -176,3 +176,21 @@ existing `glass-card` / `input-field` / `btn-primary` styles.
 - Every response carries `data_sources`, `limitations`, provenance labels, and the agent/calculation trace.
 
 Verified by `backend/tests/test_substation_workflow.py` (15 tests).
+
+
+---
+
+## Related planning documents
+
+- **[EXECUTION_PLAN_SUBSTATION_DSM_WORKFLOW.md](EXECUTION_PLAN_SUBSTATION_DSM_WORKFLOW.md)** — the
+  next-phase execution plan (verified baseline, target architecture, agent-workflow table, API +
+  frontend execution plans, timeline/Gantt, file-level plan, testing and acceptance criteria).
+- **[report/suryagrid_execution_plan_and_workflow.pdf](report/suryagrid_execution_plan_and_workflow.pdf)**
+  (and `.tex`) — the same execution plan as a compiled technical report.
+- **[DSM_SUBSTATION_INPUT_TRACE.md](DSM_SUBSTATION_INPUT_TRACE.md)** — exactly how this workflow's
+  DSM step consumes the substation context, including the blocked calculations.
+
+> This document describes the workflow **as implemented at commit `5bed3cd`** (backend orchestrator
+> + the combined `SubstationWorkflowPanel` on the Locations and DSM pages). Wiring every individual
+> dashboard card (weather, solar, cloud, timeline, DSM, source/limitation, agent-trace) to a shared
+> substation selection is tracked as **Phase G/H** in the execution plan above.

@@ -280,5 +280,76 @@ def test_api_orchestrate_endpoint_is_honest():
     asyncio.run(run())
 
 
+# --------------------------------------------------------------------------- #
+# Enriched calculation_trace field arrays (plan §11)
+# --------------------------------------------------------------------------- #
+def test_calculation_trace_field_arrays_without_capacity():
+    _require_substations()
+    ctx = SVC.get_context(_first_id())
+    res = _run(ctx, forecast_horizon_hours=12)
+    calc = res["workflow"]["calculation_trace"]
+    for key in (
+        "selected_substation_fields_used",
+        "selected_substation_fields_missing",
+        "weather_features_used",
+        "solar_features_used",
+        "grid_features_used",
+        "tariff_features_used",
+        "load_features_used",
+        "model_files_used",
+        "formulas_or_rules_used",
+        "calculations_skipped",
+        "skip_reasons",
+    ):
+        assert key in calc, key
+    assert {"substation_id", "latitude", "longitude"} <= set(
+        calc["selected_substation_fields_used"]
+    )
+    assert "capacity_mva" in calc["selected_substation_fields_missing"]  # always null in OSM
+    assert "clearsky_ghi_wm2" in calc["weather_features_used"]
+    assert len(calc["solar_features_used"]) >= 1  # true model feature_columns
+    assert "backend/models/trained/solar_forecast_model.pkl" in calc["model_files_used"]
+    assert "backend/models/trained/cloud_risk_classifier.pkl" in calc["model_files_used"]
+    assert len(calc["formulas_or_rules_used"]) >= 3
+    skipped = calc["calculations_skipped"]
+    assert "estimated_generation_mw" in skipped  # no capacity given
+    assert "dsm_rupee_charge" in skipped  # no official tariff, ever
+    assert "deviation_percent" in skipped  # no schedule given
+    assert all(s in calc["skip_reasons"] for s in skipped)  # every skip carries a reason
+
+
+def test_calculation_trace_with_schedule_uses_dsm_model():
+    _require_substations()
+    ctx = SVC.get_context(_first_id())
+    res = _run(ctx, site_capacity_mw=50.0, scheduled_generation_mw=20.0, forecast_horizon_hours=12)
+    calc = res["workflow"]["calculation_trace"]
+    assert "backend/models/trained/dsm_classifier.pkl" in calc["model_files_used"]
+    assert "estimated_generation_mw" not in calc["calculations_skipped"]
+    assert "deviation_percent" not in calc["calculations_skipped"]
+    assert res["dsm_forecast"]["deviation_percent"] is not None
+
+
+# --------------------------------------------------------------------------- #
+# /substations reconciles with the parquet catalog
+# --------------------------------------------------------------------------- #
+def test_api_substations_list_never_empty_when_catalog_exists():
+    _require_substations()
+
+    async def run():
+        r = await _api("get", "/api/v1/substations", params={"limit": 10})
+        assert r.status_code == 200
+        data = r.json()["data"]
+        assert data["source"] in ("database", "parquet_catalog")
+        assert data["count"] >= 1  # never an empty list while the catalog has rows
+        if data["source"] == "parquet_catalog":
+            ids = {s["id"] for s in data["substations"]}
+            catalog_ids = {c["substation_id"] for c in SVC.list_catalog(limit=10)}
+            assert ids == catalog_ids
+            # OSM has no operator/district/state -> stay null, never guessed
+            assert all(s["operator"] is None and s["district"] is None for s in data["substations"])
+
+    asyncio.run(run())
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

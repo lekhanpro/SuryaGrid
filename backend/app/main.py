@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_agents import router as agents_router
+from app.api.routes_alerts import router as alerts_router
 from app.api.routes_dsm import router as dsm_router
 from app.api.routes_energy import router as energy_router
 from app.api.routes_forecast import router as forecast_router
@@ -102,6 +103,7 @@ def create_app() -> FastAPI:
     # Substation-driven agent workflow (registered AFTER locations so /substations/catalog
     # and /substations/{substation_id} resolve without clashing with existing routes).
     app.include_router(substation_workflow_router, prefix="/api/v1", tags=["substation-workflow"])
+    app.include_router(alerts_router, prefix="/api/v1", tags=["alerts"])
 
     return app
 

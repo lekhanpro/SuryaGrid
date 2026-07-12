@@ -107,6 +107,32 @@ async def orchestrate_substation(body: OrchestrateRequest):
     )
 
 
+@router.post("/orchestrate/substation/ai")
+async def orchestrate_substation_ai(body: OrchestrateRequest):
+    """Deterministic workflow + AI reasoning layer (Phase 1.5).
+
+    Numbers are identical to POST /orchestrate/substation (same run object); the
+    ``ai`` block adds narrative insights from an OpenAI-compatible LLM when
+    configured, else a deterministic explanation (``status=deterministic_fallback``).
+    """
+    from app.agents.ai.orchestrator import get_ai_orchestrator
+
+    context = _require_context(body.substation_id, body.site_latitude, body.site_longitude)
+    result = await _orchestrator.run(
+        context,
+        site_capacity_mw=body.site_capacity_mw,
+        forecast_horizon_hours=body.forecast_horizon_hours,
+        scheduled_generation_mw=body.scheduled_generation_mw,
+        use_live_weather=body.use_live_weather,
+    )
+    ai = await get_ai_orchestrator().run(result)
+    return success_response(
+        data={**result, "ai": ai},
+        message="Substation workflow + AI reasoning layer (deterministic numbers; LLM "
+        "narrative with deterministic fallback).",
+    )
+
+
 @router.post("/dsm/forecast")
 async def dsm_forecast(body: OrchestrateRequest):
     context = _require_context(body.substation_id, body.site_latitude, body.site_longitude)

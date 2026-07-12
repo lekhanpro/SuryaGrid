@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     WEATHER_PROVIDER: str = "open-meteo"
     WEATHER_API_BASE_URL: str = "https://api.open-meteo.com/v1/forecast"
 
+    # Agentic AI reasoning layer (Phase 1.5). Disabled by default; numbers always
+    # come from the deterministic orchestrator - the LLM only writes narrative.
+    AI_ENABLED: bool = False
+    AI_BASE_URL: str = ""  # OpenAI-compatible endpoint (e.g. http://localhost:11434/v1)
+    AI_API_KEY: str = ""  # key if the endpoint requires one
+    AI_MODEL: str = ""  # model name at that endpoint
+    AI_TIMEOUT_S: float = 30.0
+    AI_MAX_RETRIES: int = 2
+
     # DSM defaults (see docs/DSM_RULE_SOURCES.md)
     DSM_DEFAULT_REGION: str = "Karnataka"
     DSM_DEFAULT_RULE_PROFILE: str = "kerc-solar"
@@ -41,6 +50,9 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 60
+    # RBAC gate (Phase 4). Off by default so the platform stays open in dev; when
+    # true, protected routes require a Bearer JWT and the placeholder secret is refused.
+    AUTH_REQUIRED: bool = False
 
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]

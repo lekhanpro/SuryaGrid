@@ -7,17 +7,9 @@
 // honest DSM forecast. Nothing is fabricated here - missing real fields (capacity_mva,
 // voltage) are shown as "not available" and their DSM calculations are listed as blocked.
 
-import { useEffect, useState } from "react";
-import { getSubstationCatalog, orchestrateSubstation } from "@/lib/api";
-
-type CatalogRow = {
-  substation_id: string;
-  display_label: string;
-  voltage_kv: number | null;
-  latitude: number | null;
-  longitude: number | null;
-  reliability_score: number | null;
-};
+import { useState } from "react";
+import { orchestrateSubstation } from "@/lib/api";
+import { useSubstationSelection } from "@/lib/substation-selection";
 
 function Chip({ label }: { label: string }) {
   const bad = label === "NOT_AVAILABLE" || label === "NEEDS_OFFICIAL_SOURCE";
@@ -46,8 +38,12 @@ function Stat({ label, value, accent }: { label: string; value: any; accent?: st
 }
 
 export default function SubstationWorkflowPanel() {
-  const [catalog, setCatalog] = useState<CatalogRow[]>([]);
-  const [selected, setSelected] = useState<string>("");
+  const {
+    catalog,
+    selectedId: selected,
+    setSelectedId: setSelected,
+    error: catalogError,
+  } = useSubstationSelection();
   const [form, setForm] = useState({
     site_capacity_mw: 50,
     scheduled_generation_mw: 20,
@@ -55,26 +51,14 @@ export default function SubstationWorkflowPanel() {
     use_live_weather: true,
   });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>("");
+  const [runError, setRunError] = useState<string>("");
   const [result, setResult] = useState<any>(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const c = await getSubstationCatalog(1000);
-        const rows: CatalogRow[] = c.substations || [];
-        setCatalog(rows);
-        if (rows.length) setSelected(rows[0].substation_id);
-      } catch (e: any) {
-        setError(e?.message || "Failed to load substation catalog");
-      }
-    })();
-  }, []);
+  const error = runError || catalogError;
 
   const run = async () => {
     if (!selected) return;
     setBusy(true);
-    setError("");
+    setRunError("");
     try {
       const r = await orchestrateSubstation({
         substation_id: selected,
@@ -85,7 +69,7 @@ export default function SubstationWorkflowPanel() {
       });
       setResult(r);
     } catch (e: any) {
-      setError(e?.message || "Workflow failed");
+      setRunError(e?.message || "Workflow failed");
       setResult(null);
     }
     setBusy(false);

@@ -87,10 +87,12 @@ def _write_card(preconditions: dict, reason: str | None, *, ready: bool) -> None
         training_data_sources=[
             {
                 "name": "Open-Meteo Bengaluru weather (environment state, partial)",
+                "url": "https://open-meteo.com/en/docs/historical-weather-api",
                 "label": REAL_COORDINATE_BASED,
             },
             {
                 "name": "Official DSM/tariff rupee reward terms",
+                "url": "docs/DSM_RULE_SOURCES.md",
                 "label": prov.NEEDS_OFFICIAL_SOURCE,
                 "status": "absent",
             },

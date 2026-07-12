@@ -170,14 +170,15 @@ SOURCES: dict[str, SourceRecord] = {
     ),
     "SRC-NASA-POWER-001": SourceRecord(
         id="SRC-NASA-POWER-001",
-        name="NASA POWER (reserved future provider)",
+        name="NASA POWER (historical fill / cross-check)",
         type="weather",
         classification=OFFICIAL_SOURCE,
         url="https://power.larc.nasa.gov",
         license="Free (NASA POWER terms)",
         access_date=_ACCESS,
-        notes="Provider slot reserved; not yet wired.",
-        verified="pending",
+        notes="Wired: app/providers/nasa_power.py. Reanalysis/NRT (days latency); "
+        "historical fill and Open-Meteo cross-validation only, never a live forecast.",
+        verified="verified",
         doc_anchor="",
     ),
     "SRC-SOLCAST-001": SourceRecord(
